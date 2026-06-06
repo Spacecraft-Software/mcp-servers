@@ -7,12 +7,7 @@
 			"version": "1.0.0"
 		},
 		"nixos": {
-			"command": "nix",
-			"args": [
-				"run",
-				"github:utensils/mcp-nixos",
-				"--"
-			],
+			"command": "mcp-nixos",
 			"type": "stdio"
 		},
 		"io.github.upstash/context7": {
