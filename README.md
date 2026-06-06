@@ -34,20 +34,20 @@ For more details see the [VSCode MCP documentation](https://code.visualstudio.co
 
 ## Antigravity Setup
 
-Copy the provided reference configuration to your Antigravity user config directory.
+Copy the provided reference configuration to the Antigravity 2.0 user config path.
 
 ### macOS / Linux
 
 ```bash
-mkdir -p ~/.gemini/antigravity
-cp antigravity/mcp_config.json ~/.gemini/antigravity/mcp_config.json
+mkdir -p ~/.gemini/config
+cp antigravity/mcp_config.json ~/.gemini/config/mcp_config.json
 ```
 
 ### Windows
 
 ```powershell
-New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.gemini\antigravity"
-Copy-Item antigravity\mcp_config.json "$env:USERPROFILE\.gemini\antigravity\mcp_config.json"
+New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.gemini\config"
+Copy-Item antigravity\mcp_config.json "$env:USERPROFILE\.gemini\config\mcp_config.json"
 ```
 
 Then set the required environment variables before launching Antigravity:
@@ -66,7 +66,7 @@ For more details see the [Antigravity MCP documentation](https://antigravity.goo
 | File | Purpose |
 |------|---------|
 | `.vscode/mcp.json` | VSCode workspace-level MCP configuration (loaded automatically) |
-| `antigravity/mcp_config.json` | Reference configuration for Antigravity (copy to `~/.gemini/antigravity/`) |
+| `antigravity/mcp_config.json` | Reference configuration for Antigravity (copy to `~/.gemini/config/mcp_config.json`) |
 
 ## Notes
 
