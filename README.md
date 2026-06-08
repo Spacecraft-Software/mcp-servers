@@ -12,6 +12,7 @@ A collection of useful [Model Context Protocol (MCP)](https://modelcontextprotoc
 | **Memory** | `@modelcontextprotocol/server-memory` | Persistent knowledge-graph memory across sessions |
 | **Brave Search** | `@modelcontextprotocol/server-brave-search` | Privacy-focused real-time web search (requires a [free Brave API key](https://brave.com/search/api/)) |
 | **Sequential Thinking** | `@modelcontextprotocol/server-sequential-thinking` | Structured step-by-step reasoning for complex tasks |
+| **Chrome DevTools** | `chrome-devtools-mcp@latest` | Browser automation and debugging via Chrome DevTools Protocol |
 
 ## Prerequisites
 
