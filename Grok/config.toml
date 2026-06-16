@@ -1,0 +1,18 @@
+# Fragment for ~/.grok/config.toml — merge these tables into your existing config.
+# Grok keys static remote headers under `[mcp_servers.<name>.headers]`.
+
+[mcp_servers.nixos]
+command = "nix"
+args = ["run", "github:utensils/mcp-nixos", "--"]
+enabled = true
+
+[mcp_servers.context7]
+url = "https://mcp.context7.com/mcp"
+enabled = true
+
+[mcp_servers.context7.headers]
+CONTEXT7_API_KEY = "YOUR_CONTEXT7_API_KEY"
+
+[mcp_servers.microsoft-learn]
+url = "https://learn.microsoft.com/api/mcp"
+enabled = true

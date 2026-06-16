@@ -1,0 +1,11 @@
+{
+  "nixos": {
+    "enabled": true
+  },
+  "context7": {
+    "enabled": true
+  },
+  "microsoft-learn": {
+    "enabled": true
+  }
+}

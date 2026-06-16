@@ -1,0 +1,18 @@
+{
+  "nixos": {
+    "command": "nix",
+    "args": ["run", "github:utensils/mcp-nixos", "--"],
+    "type": "stdio"
+  },
+  "context7": {
+    "type": "http",
+    "url": "https://mcp.context7.com/mcp",
+    "headers": {
+      "CONTEXT7_API_KEY": "YOUR_CONTEXT7_API_KEY"
+    }
+  },
+  "microsoft-learn": {
+    "type": "http",
+    "url": "https://learn.microsoft.com/api/mcp"
+  }
+}

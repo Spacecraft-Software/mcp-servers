@@ -1,0 +1,28 @@
+# Fragment for ~/.config/goose/config.yaml — merge the `extensions` block into your
+# existing config. goose calls MCP servers "extensions"; remote ones use the
+# `streamable_http` type with a `uri` field.
+extensions:
+  nixos:
+    name: nixos
+    type: stdio
+    cmd: nix
+    args:
+      - run
+      - github:utensils/mcp-nixos
+      - --
+    enabled: true
+    timeout: 300
+  context7:
+    name: context7
+    type: streamable_http
+    uri: https://mcp.context7.com/mcp
+    headers:
+      CONTEXT7_API_KEY: YOUR_CONTEXT7_API_KEY
+    enabled: true
+    timeout: 300
+  microsoft-learn:
+    name: microsoft-learn
+    type: streamable_http
+    uri: https://learn.microsoft.com/api/mcp
+    enabled: true
+    timeout: 300
