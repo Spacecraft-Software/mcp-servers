@@ -1,0 +1,209 @@
+#!/usr/bin/env ion
+# SPDX-FileCopyrightText: 2026 Mohamed Hammad <Mohamed.Hammad@SpacecraftSoftware.org>
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# fill-keys.ion — Ion (Redox) port of fill-keys.nu.
+#
+# Fills the MCP config templates' placeholders with real values and writes ready-to-use
+# copies into a gitignored output dir (default: dist/). Values come from env vars; any
+# unset ones are prompted for (hidden input) when interactive, or left as placeholders
+# when not (CI/agent). The tracked templates are never modified.
+#
+#   Env var          Fills placeholder           Server
+#   CONTEXT7_API_KEY  YOUR_CONTEXT7_API_KEY       context7
+#   BRAVE_API_KEY     YOUR_BRAVE_API_KEY          brave-search
+#   GITHUB_PAT        YOUR_GITHUB_PAT             github
+#   WORKSPACE_PATH    /path/to/your/workspace     filesystem
+#
+# Requires: sd (cargo install sd / nix run nixpkgs#sd).
+#
+# Note: `test "x$v" = "x..."` uses the POSIX x-prefix guard — Ion's `test` treats a bare
+# leading `--word` operand as an option flag, so comparands must not start with `-`.
+
+fn usage
+    echo "Usage: fill-keys.ion [--out DIR]"
+    echo ""
+    echo "  --out DIR   output directory (gitignored), relative to the repo root [default: dist]"
+    echo "  -h, --help  show this help"
+    echo ""
+    echo "Env vars: CONTEXT7_API_KEY, BRAVE_API_KEY, GITHUB_PAT, WORKSPACE_PATH"
+end
+
+# Hidden/plain prompt on the controlling terminal; echoes the typed value to stdout.
+fn promptval label:str secret:str
+    if test "x$secret" = "x1"
+        let old = $(stty -g < /dev/tty)
+        stty -echo < /dev/tty
+        printf '%s' $label > /dev/tty
+        let reply = $(head -n 1 < /dev/tty)
+        stty $old < /dev/tty
+        printf '\n' > /dev/tty
+        echo $reply
+    else
+        printf '%s' $label > /dev/tty
+        let reply = $(head -n 1 < /dev/tty)
+        echo $reply
+    end
+end
+
+# --- argument parsing ---
+# @args[0] is the script path; Ion only lets us read the args array whole (@args),
+# so capture the first element in the loop. (Ion eats -h/--help as its own flags, so
+# the --help branch below is best-effort; see the header comment for usage.)
+let out = "dist"
+let want_out = 0
+let idx = 0
+let script = ""
+for a in @args
+    if test "x$idx" = "x0"
+        let script = $a
+        let idx = 1
+    else if test "x$want_out" = "x1"
+        let out = $a
+        let want_out = 0
+    else if test "x$a" = "x--out"
+        let want_out = 1
+    else if test "x$a" = "x--help"
+        usage
+        exit 0
+    else if test "x$a" = "x-h"
+        usage
+        exit 0
+    end
+end
+
+# --- sd preflight ---
+let have_sd = 0
+if exists -b sd
+    let have_sd = 1
+end
+if test "x$have_sd" = "x0"
+    printf 'error: sd not found. Install it: cargo install sd  (or: nix run nixpkgs#sd)\n' > /dev/stderr
+    exit 1
+end
+
+# --- paths ---
+let sdir = $(dirname $script)
+let repo = $(cd $sdir/.. && pwd)
+let first = $(printf '%s' $out | head -c 1)
+let out_root = "$repo/$out"
+if test "x$first" = "x/"
+    let out_root = $out
+end
+
+# --- interactive detection (tty -s is reliable in Ion; test -t is not) ---
+let interactive = 0
+if tty -s
+    let interactive = 1
+end
+if exists -s CI
+    let interactive = 0
+end
+if exists -s CLAUDECODE
+    let interactive = 0
+end
+
+# --- resolve each token: env var, else prompt, else empty ---
+let v_ctx = ""
+if exists -s CONTEXT7_API_KEY
+    let v_ctx = $CONTEXT7_API_KEY
+end
+if test -z "$v_ctx" && test "x$interactive" = "x1"
+    let v_ctx = $(promptval "CONTEXT7_API_KEY [blank to skip]: " "1")
+end
+
+let v_brave = ""
+if exists -s BRAVE_API_KEY
+    let v_brave = $BRAVE_API_KEY
+end
+if test -z "$v_brave" && test "x$interactive" = "x1"
+    let v_brave = $(promptval "BRAVE_API_KEY [blank to skip]: " "1")
+end
+
+let v_pat = ""
+if exists -s GITHUB_PAT
+    let v_pat = $GITHUB_PAT
+end
+if test -z "$v_pat" && test "x$interactive" = "x1"
+    let v_pat = $(promptval "GITHUB_PAT [blank to skip]: " "1")
+end
+
+let v_ws = ""
+if exists -s WORKSPACE_PATH
+    let v_ws = $WORKSPACE_PATH
+end
+if test -z "$v_ws" && test "x$interactive" = "x1"
+    let v_ws = $(promptval "WORKSPACE_PATH [blank to skip]: " "0")
+end
+
+let filled = 0
+let filled_names = ""
+let skipped_names = ""
+if test -n "$v_ctx"
+    let filled += 1
+    let filled_names ++= " CONTEXT7_API_KEY"
+else
+    let skipped_names ++= " CONTEXT7_API_KEY"
+end
+if test -n "$v_brave"
+    let filled += 1
+    let filled_names ++= " BRAVE_API_KEY"
+else
+    let skipped_names ++= " BRAVE_API_KEY"
+end
+if test -n "$v_pat"
+    let filled += 1
+    let filled_names ++= " GITHUB_PAT"
+else
+    let skipped_names ++= " GITHUB_PAT"
+end
+if test -n "$v_ws"
+    let filled += 1
+    let filled_names ++= " WORKSPACE_PATH"
+else
+    let skipped_names ++= " WORKSPACE_PATH"
+end
+
+# --- write filled copies ---
+let written = 0
+for src in [ "Antigravity/mcp_config.json" "VSCode/mcp.json" "GitHubCopilotCLI/mcp-config.json" "ClaudeCode/.mcp.json" "OpenClaude/.mcp.json" "Codex/config.toml" "Grok/config.toml" "Kimi/config.toml" "Gemini/settings.json" "Gemini/mcp-server-enablement.json" "Qwen/settings.json" "OpenCode/opencode.jsonc" "Goose/config.yaml" ]
+    let from = "$repo/$src"
+    let have = 0
+    if exists -f $from
+        let have = 1
+    end
+    if test "x$have" = "x0"
+        printf 'error: missing template %s\n' $src > /dev/stderr
+        exit 1
+    end
+    let dst = "$out_root/$src"
+    mkdir -p $(dirname $dst)
+    cp $from $dst
+    if test -n "$v_ctx"
+        sd -s "YOUR_CONTEXT7_API_KEY" $v_ctx $dst
+    end
+    if test -n "$v_brave"
+        sd -s "YOUR_BRAVE_API_KEY" $v_brave $dst
+    end
+    if test -n "$v_pat"
+        sd -s "YOUR_GITHUB_PAT" $v_pat $dst
+    end
+    if test -n "$v_ws"
+        sd -s "/path/to/your/workspace" $v_ws $dst
+    end
+    let written += 1
+end
+
+# --- summary ---
+printf 'Filled %s of 4 placeholders into %s/ (%s files)\n' $filled $out_root $written
+if test -n "$filled_names"
+    printf 'Filled:%s\n' $filled_names
+end
+if test -n "$skipped_names"
+    printf 'Left as placeholders, those servers stay inert:%s\n' $skipped_names
+end
+echo ""
+echo "Install destinations:"
+for line in [ "Antigravity/mcp_config.json -> Antigravity, editor-managed" "VSCode/mcp.json -> <workspace>/.vscode/mcp.json" "GitHubCopilotCLI/mcp-config.json -> ~/.copilot/mcp-config.json" "ClaudeCode/.mcp.json -> ~/.claude.json mcpServers" "OpenClaude/.mcp.json -> ~/.openclaude.json mcpServers" "Codex/config.toml -> ~/.codex/config.toml" "Grok/config.toml -> ~/.grok/config.toml" "Kimi/config.toml -> ~/.kimi-code/config.toml" "Gemini/settings.json -> ~/.gemini/settings.json" "Gemini/mcp-server-enablement.json -> ~/.gemini/mcp-server-enablement.json" "Qwen/settings.json -> ~/.qwen/settings.json" "OpenCode/opencode.jsonc -> ~/.config/opencode/opencode.jsonc" "Goose/config.yaml -> ~/.config/goose/config.yaml" ]
+    echo "  $line"
+end

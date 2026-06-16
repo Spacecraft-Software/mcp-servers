@@ -48,9 +48,16 @@ need a token or path filled in before they work (see Notes).
 
 ## Filling in your keys
 
-`bin/fill-keys.nu` (Nushell) substitutes the placeholders with your real values and
-writes ready-to-use copies into a gitignored `dist/` mirror — the tracked templates are
-never modified, so no secret is ever committed.
+`bin/fill-keys.*` substitutes the placeholders with your real values and writes
+ready-to-use copies into a gitignored `dist/` mirror — the tracked templates are never
+modified, so no secret is ever committed. The same tool is provided for three shells
+(pick whichever you run); all behave identically:
+
+| Script | Shell | Notes |
+|--------|-------|-------|
+| `bin/fill-keys.nu` | Nushell | no external deps (native string ops) |
+| `bin/fill-keys.sh` | POSIX sh / Bash / Brush | needs [`sd`](https://github.com/chmln/sd) |
+| `bin/fill-keys.ion` | Ion | needs `sd`; Ion eats `-h`/`--help` itself, so see the file header for usage |
 
 | Env var | Fills | Server |
 |---------|-------|--------|
@@ -61,12 +68,12 @@ never modified, so no secret is ever committed.
 
 ```sh
 # Provide values via env vars (any you omit are prompted for, or left as placeholders
-# when run non-interactively):
+# when run non-interactively). Use whichever script matches your shell:
 CONTEXT7_API_KEY=ctx7sk-... BRAVE_API_KEY=... GITHUB_PAT=ghp_... \
   WORKSPACE_PATH=/home/you/work \
-  nu bin/fill-keys.nu
+  nu bin/fill-keys.nu          # or: sh bin/fill-keys.sh  /  ion bin/fill-keys.ion
 
-nu bin/fill-keys.nu --help        # options
+nu bin/fill-keys.nu --help        # options (Nushell/POSIX; Ion: see header)
 nu bin/fill-keys.nu --out /tmp/mcp   # write somewhere else
 ```
 
