@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-A personal collection of **MCP (Model Context Protocol) server configurations**, one config file per host application. There is no source code, no build, and no test suite — the deliverable is the config files themselves. It is a Spacecraft Software-umbrella project (Personal posture, `GPL-3.0-or-later`); its GitHub remote is migrating from `UnbreakableMJ/mcp-servers` to the `Spacecraft-Software` org.
+A personal collection of **MCP (Model Context Protocol) server configurations**, one config file per host application. There is no source code, no build, and no test suite — the deliverable is the config files themselves. It is a Spacecraft Software-umbrella project (Personal posture, `GPL-3.0-or-later`); its GitHub remote is `Spacecraft-Software/mcp-servers` (migrated from `UnbreakableMJ/mcp-servers`).
 
 The only meaningful validation is that each config is well-formed JSON/TOML/YAML and matches the schema its host expects, and that `reuse lint` stays clean.
 
@@ -21,9 +21,12 @@ This repo carries the Standard §5.2 posture files and §4.3 REUSE metadata:
 ## Layout
 
 Each directory is named after the host application that consumes the file. The
-files are **templates** that mirror the live per-user config on the maintainer's
-machine; each holds only the MCP-relevant fragment (never a copy of a tool's full
-personal config, which would carry auth tokens). Host config paths are noted below.
+files are **templates**; each holds only the MCP-relevant fragment (never a copy of a
+tool's full personal config, which would carry auth tokens). Each template declares the
+full **nine-server superset** (see below). Note this differs from the maintainer's live
+machine configs, which run only the three real servers — the six generic `npx`/token
+servers ship in the templates as placeholders, not in the live configs. Host config
+paths are noted below.
 
 | Path (repo) | Host · live path | MCP schema |
 |------|------|---------------|
@@ -52,12 +55,21 @@ those files. Mind the traps: **Qwen uses `httpUrl`** while Gemini uses `url`+`ty
 
 ## The servers being configured
 
-- **nixos** — the `mcp-nixos` server (queries nixpkgs / NixOS options). Antigravity runs the `mcp-nixos` binary directly; VS Code launches it via `nix run github:utensils/mcp-nixos` over stdio.
-- **context7** (Upstash) — HTTP server at `https://mcp.context7.com/mcp`, needs a `CONTEXT7_API_KEY`. Antigravity stores it inline under `headers.CONTEXT7_API_KEY` (commit only the `YOUR_CONTEXT7_API_KEY` placeholder, never a real key); VS Code references it as a prompted `input` (`${input:CONTEXT7_API_KEY}`) so the secret is never written to the file.
-- **microsoft-learn / microsoftdocs** — HTTP server at `https://learn.microsoft.com/api/mcp`, no auth.
+Every host template declares all nine. Two groups:
+
+**The three "real" servers** (these run in the maintainer's live configs too):
+- **nixos** — `mcp-nixos` (queries nixpkgs / NixOS options). Antigravity runs the `mcp-nixos` binary directly; everywhere else it's `nix run github:utensils/mcp-nixos --` over stdio.
+- **context7** (Upstash) — HTTP, `https://mcp.context7.com/mcp`, needs a `CONTEXT7_API_KEY`. Stored inline under a header (`CONTEXT7_API_KEY` for most hosts; `Authorization: Bearer …` for VS Code, where it comes from a prompted `input`). Placeholder `YOUR_CONTEXT7_API_KEY`.
+- **microsoft-learn** — HTTP, `https://learn.microsoft.com/api/mcp`, no auth.
+
+**The six generic servers** (came in via the merged Copilot PRs; templates-only, placeholders):
+- **github** — HTTP, `https://api.githubcopilot.com/mcp/`, `Authorization: Bearer YOUR_GITHUB_PAT` (VS Code uses built-in Copilot auth, no header).
+- **filesystem** — stdio, `npx -y @modelcontextprotocol/server-filesystem <path>`. Placeholder path `/path/to/your/workspace` (VS Code uses `${workspaceFolder}`).
+- **fetch**, **memory**, **sequential-thinking** — stdio, `npx -y @modelcontextprotocol/server-{fetch,memory,sequential-thinking}`, no auth.
+- **brave-search** — stdio, `npx -y @modelcontextprotocol/server-brave-search`, env `BRAVE_API_KEY=YOUR_BRAVE_API_KEY`.
 
 ## Conventions
 
-- Antigravity's file uses **2-space** indentation; VS Code's uses **tabs**. Preserve each file's existing style.
-- Never commit a live API key — repo templates carry the `YOUR_CONTEXT7_API_KEY` placeholder (VS Code instead uses its `inputs` prompt mechanism). Because the key is a placeholder, Context7 stays unauthenticated until a real key is filled in locally.
-- These templates mirror the maintainer's live machine configs. When you change a template, apply the same change to the corresponding live file (paths in the table above), and vice-versa.
+- Antigravity's file uses **2-space** indentation; VS Code's uses **tabs**. Preserve each file's existing style. Host directory names are **case-sensitive and canonical** (`Antigravity/`, `VSCode/`) — do not reintroduce lowercase `antigravity/` or `.vscode/` variants (a past PR did; they were consolidated).
+- Never commit a real secret — templates carry placeholders (`YOUR_CONTEXT7_API_KEY`, `YOUR_GITHUB_PAT`, `YOUR_BRAVE_API_KEY`) and the `/path/to/your/workspace` path. Servers needing them stay inert until filled in locally.
+- Templates are the **canonical superset**; the maintainer's live machine runs the three real servers only. When changing a server, update **every** host template in its dialect (and the live config too, for the three real servers).

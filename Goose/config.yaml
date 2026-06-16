@@ -1,6 +1,6 @@
 # Fragment for ~/.config/goose/config.yaml — merge the `extensions` block into your
 # existing config. goose calls MCP servers "extensions"; remote ones use the
-# `streamable_http` type with a `uri` field.
+# `streamable_http` type with a `uri` field; stdio env vars go under `envs`.
 extensions:
   nixos:
     name: nixos
@@ -24,5 +24,61 @@ extensions:
     name: microsoft-learn
     type: streamable_http
     uri: https://learn.microsoft.com/api/mcp
+    enabled: true
+    timeout: 300
+  github:
+    name: github
+    type: streamable_http
+    uri: https://api.githubcopilot.com/mcp/
+    headers:
+      Authorization: Bearer YOUR_GITHUB_PAT
+    enabled: true
+    timeout: 300
+  filesystem:
+    name: filesystem
+    type: stdio
+    cmd: npx
+    args:
+      - -y
+      - "@modelcontextprotocol/server-filesystem"
+      - /path/to/your/workspace
+    enabled: true
+    timeout: 300
+  fetch:
+    name: fetch
+    type: stdio
+    cmd: npx
+    args:
+      - -y
+      - "@modelcontextprotocol/server-fetch"
+    enabled: true
+    timeout: 300
+  memory:
+    name: memory
+    type: stdio
+    cmd: npx
+    args:
+      - -y
+      - "@modelcontextprotocol/server-memory"
+    enabled: true
+    timeout: 300
+  brave-search:
+    name: brave-search
+    type: stdio
+    cmd: npx
+    args:
+      - -y
+      - "@modelcontextprotocol/server-brave-search"
+    envs:
+      BRAVE_API_KEY: YOUR_BRAVE_API_KEY
+    enabled: true
+    timeout: 300
+  sequential-thinking:
+    name: sequential-thinking
+    type: stdio
+    cmd: npx
+    args:
+      - -y
+      - "@modelcontextprotocol/server-sequential-thinking"
     enabled: true
     timeout: 300

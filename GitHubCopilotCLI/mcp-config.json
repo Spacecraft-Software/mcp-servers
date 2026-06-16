@@ -14,5 +14,40 @@
   "microsoft-learn": {
     "type": "http",
     "url": "https://learn.microsoft.com/api/mcp"
+  },
+  "github": {
+    "type": "http",
+    "url": "https://api.githubcopilot.com/mcp/",
+    "headers": {
+      "Authorization": "Bearer YOUR_GITHUB_PAT"
+    }
+  },
+  "filesystem": {
+    "command": "npx",
+    "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/your/workspace"],
+    "type": "stdio"
+  },
+  "fetch": {
+    "command": "npx",
+    "args": ["-y", "@modelcontextprotocol/server-fetch"],
+    "type": "stdio"
+  },
+  "memory": {
+    "command": "npx",
+    "args": ["-y", "@modelcontextprotocol/server-memory"],
+    "type": "stdio"
+  },
+  "brave-search": {
+    "command": "npx",
+    "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+    "type": "stdio",
+    "env": {
+      "BRAVE_API_KEY": "YOUR_BRAVE_API_KEY"
+    }
+  },
+  "sequential-thinking": {
+    "command": "npx",
+    "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
+    "type": "stdio"
   }
 }
