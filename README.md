@@ -32,4 +32,29 @@ host's own dialect. They all wire up the same three servers:
 - Schemas differ per host (e.g. Qwen uses `httpUrl`, Codex uses `http_headers`, Copilot
   CLI omits the `mcpServers` wrapper). See `CLAUDE.md` for the full per-host schema table.
 
-Licensed GPL-3.0-or-later.
+## Project Posture
+
+`mcp-servers` is a **personal hobby project** under the
+[Spacecraft Software](https://SpacecraftSoftware.org/) umbrella. It is developed at hobby
+pace and shaped around the maintainer's own toolchain, not a general audience.
+
+- **No warranty, no liability.** See [`NOTICE.md`](./NOTICE.md).
+- **Contributions are welcome but not guaranteed.** See [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+- **Forking is encouraged.** GPL-3.0-or-later is there for exactly that.
+
+## License
+
+Licensed under **GPL-3.0-or-later**. This repository is [REUSE](https://reuse.software)-
+compliant: license texts live in [`LICENSES/`](./LICENSES) and per-file copyright/license
+metadata is declared in [`REUSE.toml`](./REUSE.toml). The root `LICENSE` is retained for
+GitHub's license detection.
+
+## Maintainer
+
+Mohamed Hammad &lt;Mohamed.Hammad@SpacecraftSoftware.org&gt;
+Copyright (C) 2026 Mohamed Hammad &amp; Spacecraft Software
+Website: <https://SpacecraftSoftware.org/>
+
+---
+
+*--- Forged in Spacecraft Software ---*

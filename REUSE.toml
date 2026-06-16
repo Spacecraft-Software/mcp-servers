@@ -1,0 +1,14 @@
+version = 1
+SPDX-PackageName = "mcp-servers"
+SPDX-PackageSupplier = "Mohamed Hammad <Mohamed.Hammad@SpacecraftSoftware.org>"
+SPDX-PackageDownloadLocation = "https://github.com/Spacecraft-Software/mcp-servers"
+
+# Every file in this repository is software-class (MCP configuration templates,
+# tooling, and project docs) under GPL-3.0-or-later. The config templates are meant
+# to be copied verbatim into users' real host configs, so they carry no inline SPDX
+# headers (and JSON cannot hold comments anyway) — coverage is declared here instead.
+[[annotations]]
+path = "**"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Mohamed Hammad <Mohamed.Hammad@SpacecraftSoftware.org>"
+SPDX-License-Identifier = "GPL-3.0-or-later"

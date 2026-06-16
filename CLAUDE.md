@@ -4,9 +4,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-A personal collection of **MCP (Model Context Protocol) server configurations**, one config file per host application. There is no source code, no build, and no test suite — the deliverable is the JSON config files themselves. Its own GitHub remote (`UnbreakableMJ/mcp-servers`, GPL-3.0) is separate from the `/spacecraft-software/` umbrella, even though it sits inside that tree.
+A personal collection of **MCP (Model Context Protocol) server configurations**, one config file per host application. There is no source code, no build, and no test suite — the deliverable is the config files themselves. It is a Spacecraft Software-umbrella project (Personal posture, `GPL-3.0-or-later`); its GitHub remote is migrating from `UnbreakableMJ/mcp-servers` to the `Spacecraft-Software` org.
 
-The only meaningful validation is that each config is well-formed JSON and matches the schema its host expects.
+The only meaningful validation is that each config is well-formed JSON/TOML/YAML and matches the schema its host expects, and that `reuse lint` stays clean.
+
+## Compliance & posture (Spacecraft Software Standard)
+
+This repo carries the Standard §5.2 posture files and §4.3 REUSE metadata:
+
+- `README.md` (with a Project Posture section), `NOTICE.md`, `CONTRIBUTING.md` — derived from `/spacecraft-software/license/`, tailored to this config repo.
+- `LICENSES/GPL-3.0-or-later.txt` — verbatim license text; the root `LICENSE` stays as GitHub's detection pointer.
+- `REUSE.toml` — a single `path = "**"` annotation licenses **every** file `GPL-3.0-or-later`. The config templates deliberately carry **no inline SPDX headers** (they are meant to be copied verbatim into users' real host configs, and JSON can't hold comments) — REUSE.toml is the coverage mechanism. When adding any file, it's covered automatically; keep `reuse lint` clean (`nix run nixpkgs#reuse -- lint`).
+- Commits must be signed/verified (§6.3) — already configured (SSH ed25519, identity `Mohamed.Hammad@SpacecraftSoftware.org`).
+- No `CREDITS.md`: the referenced MCP servers are invoked (e.g. `nix run`) or hit as remote endpoints, not vendored, so §13.3 isn't triggered.
 
 ## Layout
 
