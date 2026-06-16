@@ -1,74 +1,74 @@
 # mcp-servers
 
-A collection of useful [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server configurations for [VSCode](https://code.visualstudio.com/) and [Antigravity](https://antigravity.google/).
+Per-tool **MCP (Model Context Protocol) server configurations** for the coding agents
+and editors I use. Each directory holds the MCP config fragment for one host, in that
+host's own dialect. They all wire up the same nine servers:
 
-## Included MCP Servers
+| Server | Transport | Endpoint / command | Auth |
+|--------|-----------|--------------------|------|
+| **nixos** | stdio | `nix run github:utensils/mcp-nixos --` ([mcp-nixos](https://github.com/utensils/mcp-nixos)) — nixpkgs / NixOS options | none |
+| **context7** | http | `https://mcp.context7.com/mcp` — Upstash Context7 library docs | `CONTEXT7_API_KEY` |
+| **microsoft-learn** | http | `https://learn.microsoft.com/api/mcp` — Microsoft Learn docs | none |
+| **github** | http | `https://api.githubcopilot.com/mcp/` — GitHub API (repos, PRs, issues, code search) | GitHub PAT |
+| **filesystem** | stdio | `npx -y @modelcontextprotocol/server-filesystem <path>` — sandboxed file access | none (set a path) |
+| **fetch** | stdio | `npx -y @modelcontextprotocol/server-fetch` — fetch live web content | none |
+| **memory** | stdio | `npx -y @modelcontextprotocol/server-memory` — knowledge-graph memory | none |
+| **brave-search** | stdio | `npx -y @modelcontextprotocol/server-brave-search` — web search | `BRAVE_API_KEY` |
+| **sequential-thinking** | stdio | `npx -y @modelcontextprotocol/server-sequential-thinking` — step-by-step reasoning | none |
 
-| Server | Package | Description |
-|--------|---------|-------------|
-| **GitHub** | Remote: `https://api.githubcopilot.com/mcp/` | Full GitHub API access — repos, PRs, issues, code search, and more |
-| **Filesystem** | `@modelcontextprotocol/server-filesystem` | Sandboxed read/write access to local project files |
-| **Fetch** | `@modelcontextprotocol/server-fetch` | Retrieve live web content and APIs for real-time context |
-| **Memory** | `@modelcontextprotocol/server-memory` | Persistent knowledge-graph memory across sessions |
-| **Brave Search** | `@modelcontextprotocol/server-brave-search` | Privacy-focused real-time web search (requires a [free Brave API key](https://brave.com/search/api/)) |
-| **Sequential Thinking** | `@modelcontextprotocol/server-sequential-thinking` | Structured step-by-step reasoning for complex tasks |
+The `npx`-based servers need Node.js 18+. `github`, `brave-search`, and `filesystem`
+need a token or path filled in before they work (see Notes).
 
-## Prerequisites
+## Supported hosts
 
-- **Node.js** v18 or later (for `npx`-based servers)
-- **GitHub Personal Access Token** (for the GitHub MCP server outside of VSCode's native Copilot auth)
-- **Brave Search API Key** (optional — only needed for the `brave-search` server; free tier available at https://brave.com/search/api/)
-
-## VSCode Setup
-
-The `.vscode/mcp.json` file is automatically picked up by VSCode when you open this workspace. All servers will be available in **Copilot Agent Mode** via the tools icon in the Copilot Chat panel.
-
-1. Open this repository in VSCode.
-2. Open the Copilot Chat panel and switch to **Agent** mode.
-3. Click the **🔧 tools** icon — all MCP servers should appear in the list.
-4. When first using `brave-search`, VSCode will prompt you for your Brave API key.
-
-> **Note:** The `github` server uses VSCode's existing GitHub Copilot authentication automatically — no PAT needed.
-
-For more details see the [VSCode MCP documentation](https://code.visualstudio.com/docs/copilot/customization/mcp-servers).
-
-## Antigravity Setup
-
-Copy the provided reference configuration to the Antigravity 2.0 user config path.
-
-### macOS / Linux
-
-```bash
-mkdir -p ~/.gemini/config
-cp antigravity/mcp_config.json ~/.gemini/config/mcp_config.json
-```
-
-### Windows
-
-```powershell
-New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.gemini\config"
-Copy-Item antigravity\mcp_config.json "$env:USERPROFILE\.gemini\config\mcp_config.json"
-```
-
-Then set the required environment variables before launching Antigravity:
-
-```bash
-export GITHUB_PERSONAL_ACCESS_TOKEN=ghp_your_token_here  # GitHub PAT
-export BRAVE_API_KEY=your_brave_api_key_here              # Optional
-```
-
-Restart Antigravity and open **... → MCP Servers → Manage MCP Servers** to verify the servers are listed.
-
-For more details see the [Antigravity MCP documentation](https://antigravity.google/docs/mcp) and the [GitHub MCP server Antigravity guide](https://github.com/github/github-mcp-server/blob/main/docs/installation-guides/install-antigravity.md).
-
-## Configuration Files
-
-| File | Purpose |
-|------|---------|
-| `.vscode/mcp.json` | VSCode workspace-level MCP configuration (loaded automatically) |
-| `antigravity/mcp_config.json` | Reference configuration for Antigravity (copy to `~/.gemini/config/mcp_config.json`) |
+| Directory | Host | Live config path |
+|-----------|------|------------------|
+| `Antigravity/` | Antigravity | editor-managed |
+| `VSCode/` | VS Code | `.vscode/mcp.json` |
+| `GitHubCopilotCLI/` | GitHub Copilot CLI | `~/.copilot/mcp-config.json` |
+| `ClaudeCode/` | Claude Code | `~/.claude.json` |
+| `OpenClaude/` | OpenClaude | `~/.openclaude.json` |
+| `Codex/` | OpenAI Codex | `~/.codex/config.toml` |
+| `Grok/` | Grok CLI | `~/.grok/config.toml` |
+| `Kimi/` | Kimi Code CLI | `~/.kimi-code/config.toml` |
+| `Gemini/` | Gemini CLI | `~/.gemini/settings.json` |
+| `Qwen/` | Qwen Code | `~/.qwen/settings.json` |
+| `OpenCode/` | opencode | `~/.config/opencode/opencode.jsonc` |
+| `Goose/` | goose | `~/.config/goose/config.yaml` |
 
 ## Notes
 
-- **Filesystem path (Antigravity):** The `filesystem` server in `antigravity/mcp_config.json` uses a placeholder path (`/path/to/your/workspace`). Replace it with the absolute path of the directory you want the AI to access before copying the file.
-- **GitHub endpoint:** Both configs target `https://api.githubcopilot.com/mcp/` — the official remote GitHub MCP server. VSCode authenticates via its built-in Copilot session; Antigravity uses the `GITHUB_PERSONAL_ACCESS_TOKEN` environment variable.
+- Files are **templates** with placeholders — replace these locally, never commit real
+  values: `YOUR_CONTEXT7_API_KEY`, `YOUR_GITHUB_PAT`, `YOUR_BRAVE_API_KEY`, and the
+  `filesystem` server's `/path/to/your/workspace`. Until they're filled in, those servers
+  won't connect (the other servers work as-is). VS Code instead prompts for the Context7
+  and Brave keys via its `inputs` mechanism, and uses built-in Copilot auth for `github`.
+- Schemas differ per host (e.g. Qwen uses `httpUrl`, Codex uses `http_headers`, Copilot
+  CLI omits the `mcpServers` wrapper). See `CLAUDE.md` for the full per-host schema table.
+
+## Project Posture
+
+`mcp-servers` is a **personal hobby project** under the
+[Spacecraft Software](https://SpacecraftSoftware.org/) umbrella. It is developed at hobby
+pace and shaped around the maintainer's own toolchain, not a general audience.
+
+- **No warranty, no liability.** See [`NOTICE.md`](./NOTICE.md).
+- **Contributions are welcome but not guaranteed.** See [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+- **Forking is encouraged.** GPL-3.0-or-later is there for exactly that.
+
+## License
+
+Licensed under **GPL-3.0-or-later**. This repository is [REUSE](https://reuse.software)-
+compliant: license texts live in [`LICENSES/`](./LICENSES) and per-file copyright/license
+metadata is declared in [`REUSE.toml`](./REUSE.toml). The root `LICENSE` is retained for
+GitHub's license detection.
+
+## Maintainer
+
+Mohamed Hammad &lt;Mohamed.Hammad@SpacecraftSoftware.org&gt;
+Copyright (C) 2026 Mohamed Hammad &amp; Spacecraft Software
+Website: <https://SpacecraftSoftware.org/>
+
+---
+
+*--- Forged in Spacecraft Software ---*

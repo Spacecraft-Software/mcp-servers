@@ -1,0 +1,46 @@
+# Fragment for ~/.kimi-code/config.toml (Kimi Code CLI; the legacy ~/.kimi/ path is
+# pre-migration). Merge these tables into your existing config. Servers live under
+# `[mcp.client.servers.<name>]`; static remote headers under `.headers`; stdio server
+# env vars under `.env`.
+
+[mcp.client.servers.nixos]
+command = "nix"
+args = ["run", "github:utensils/mcp-nixos", "--"]
+
+[mcp.client.servers.context7]
+url = "https://mcp.context7.com/mcp"
+
+[mcp.client.servers.context7.headers]
+CONTEXT7_API_KEY = "YOUR_CONTEXT7_API_KEY"
+
+[mcp.client.servers.microsoft-learn]
+url = "https://learn.microsoft.com/api/mcp"
+
+[mcp.client.servers.github]
+url = "https://api.githubcopilot.com/mcp/"
+
+[mcp.client.servers.github.headers]
+Authorization = "Bearer YOUR_GITHUB_PAT"
+
+[mcp.client.servers.filesystem]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/your/workspace"]
+
+[mcp.client.servers.fetch]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-fetch"]
+
+[mcp.client.servers.memory]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-memory"]
+
+[mcp.client.servers.brave-search]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-brave-search"]
+
+[mcp.client.servers.brave-search.env]
+BRAVE_API_KEY = "YOUR_BRAVE_API_KEY"
+
+[mcp.client.servers.sequential-thinking]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-sequential-thinking"]

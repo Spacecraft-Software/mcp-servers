@@ -1,25 +1,27 @@
 {
+  "_comment": "Merge the mcpServers block into ~/.gemini/settings.json. Gemini CLI keys HTTP servers with `url` + `type: http`. New servers must also be enabled in ~/.gemini/mcp-server-enablement.json (see mcp-server-enablement.json here), and the working folder must be trusted for user-level servers to activate.",
   "mcpServers": {
     "nixos": {
-      "command": "mcp-nixos"
+      "command": "nix",
+      "args": ["run", "github:utensils/mcp-nixos", "--"]
     },
     "context7": {
-      "serverUrl": "https://mcp.context7.com/mcp",
+      "url": "https://mcp.context7.com/mcp",
+      "type": "http",
       "headers": {
         "CONTEXT7_API_KEY": "YOUR_CONTEXT7_API_KEY"
-      },
-      "disabled": false
+      }
     },
     "microsoft-learn": {
-      "serverUrl": "https://learn.microsoft.com/api/mcp",
-      "disabled": false
+      "url": "https://learn.microsoft.com/api/mcp",
+      "type": "http"
     },
     "github": {
-      "serverUrl": "https://api.githubcopilot.com/mcp/",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "type": "http",
       "headers": {
         "Authorization": "Bearer YOUR_GITHUB_PAT"
-      },
-      "disabled": false
+      }
     },
     "filesystem": {
       "command": "npx",

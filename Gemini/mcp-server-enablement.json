@@ -1,0 +1,29 @@
+{
+  "nixos": {
+    "enabled": true
+  },
+  "context7": {
+    "enabled": true
+  },
+  "microsoft-learn": {
+    "enabled": true
+  },
+  "github": {
+    "enabled": true
+  },
+  "filesystem": {
+    "enabled": true
+  },
+  "fetch": {
+    "enabled": true
+  },
+  "memory": {
+    "enabled": true
+  },
+  "brave-search": {
+    "enabled": true
+  },
+  "sequential-thinking": {
+    "enabled": true
+  }
+}
