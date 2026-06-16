@@ -73,3 +73,7 @@ Every host template declares all nine. Two groups:
 - Antigravity's file uses **2-space** indentation; VS Code's uses **tabs**. Preserve each file's existing style. Host directory names are **case-sensitive and canonical** (`Antigravity/`, `VSCode/`) — do not reintroduce lowercase `antigravity/` or `.vscode/` variants (a past PR did; they were consolidated).
 - Never commit a real secret — templates carry placeholders (`YOUR_CONTEXT7_API_KEY`, `YOUR_GITHUB_PAT`, `YOUR_BRAVE_API_KEY`) and the `/path/to/your/workspace` path. Servers needing them stay inert until filled in locally.
 - Templates are the **canonical superset**; the maintainer's live machine runs the three real servers only. When changing a server, update **every** host template in its dialect (and the live config too, for the three real servers).
+
+## Tooling
+
+`bin/fill-keys.nu` (Nushell) substitutes the four placeholder tokens (`YOUR_CONTEXT7_API_KEY`, `YOUR_BRAVE_API_KEY`, `YOUR_GITHUB_PAT`, `/path/to/your/workspace`) with values from env vars (prompting for any unset ones when interactive) and writes filled copies into a **gitignored `dist/` mirror** — it never edits the tracked templates, so the no-secrets rule holds. It has an explicit host-file list (the docs and VS Code's `${input:}`/`${workspaceFolder}` fields are deliberately left alone). If you add or rename a host config, update that list. It's the one executable (`755`) file here; everything else is `644` data.

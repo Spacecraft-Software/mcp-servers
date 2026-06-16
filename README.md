@@ -46,6 +46,36 @@ need a token or path filled in before they work (see Notes).
 - Schemas differ per host (e.g. Qwen uses `httpUrl`, Codex uses `http_headers`, Copilot
   CLI omits the `mcpServers` wrapper). See `CLAUDE.md` for the full per-host schema table.
 
+## Filling in your keys
+
+`bin/fill-keys.nu` (Nushell) substitutes the placeholders with your real values and
+writes ready-to-use copies into a gitignored `dist/` mirror — the tracked templates are
+never modified, so no secret is ever committed.
+
+| Env var | Fills | Server |
+|---------|-------|--------|
+| `CONTEXT7_API_KEY` | `YOUR_CONTEXT7_API_KEY` | context7 |
+| `BRAVE_API_KEY` | `YOUR_BRAVE_API_KEY` | brave-search |
+| `GITHUB_PAT` | `YOUR_GITHUB_PAT` | github |
+| `WORKSPACE_PATH` | `/path/to/your/workspace` | filesystem |
+
+```sh
+# Provide values via env vars (any you omit are prompted for, or left as placeholders
+# when run non-interactively):
+CONTEXT7_API_KEY=ctx7sk-... BRAVE_API_KEY=... GITHUB_PAT=ghp_... \
+  WORKSPACE_PATH=/home/you/work \
+  nu bin/fill-keys.nu
+
+nu bin/fill-keys.nu --help        # options
+nu bin/fill-keys.nu --out /tmp/mcp   # write somewhere else
+```
+
+The script prints each filled file's intended install destination. Copy the relevant
+`dist/<Host>/…` file to that path (whole-file for most hosts; for hosts whose live
+config holds other settings — Codex, Claude Code, Grok, Kimi, OpenClaude — merge the
+MCP block in). Omitted keys keep their placeholder, so that server simply stays inert.
+VS Code is copied unchanged: it prompts for the Context7/Brave keys itself.
+
 ## Project Posture
 
 `mcp-servers` is a **personal hobby project** under the
