@@ -55,6 +55,10 @@
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
       "env": {}
+    },
+    "crates": {
+      "type": "stdio",
+      "command": "crates-mcp"
     }
   }
 }

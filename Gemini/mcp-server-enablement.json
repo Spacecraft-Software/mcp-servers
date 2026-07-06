@@ -25,5 +25,8 @@
   },
   "sequential-thinking": {
     "enabled": true
+  },
+  "crates": {
+    "enabled": true
   }
 }

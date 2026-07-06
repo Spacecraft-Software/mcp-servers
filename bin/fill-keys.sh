@@ -14,6 +14,7 @@
 #   BRAVE_API_KEY     YOUR_BRAVE_API_KEY          brave-search
 #   GITHUB_PAT        YOUR_GITHUB_PAT             github
 #   WORKSPACE_PATH    /path/to/your/workspace     filesystem
+
 #
 # Requires: sd (https://github.com/chmln/sd — `cargo install sd` or `nix run nixpkgs#sd`).
 
@@ -126,6 +127,7 @@ Gemini/settings.json|~/.gemini/settings.json
 Gemini/mcp-server-enablement.json|~/.gemini/mcp-server-enablement.json
 Qwen/settings.json|~/.qwen/settings.json
 OpenCode/opencode.jsonc|~/.config/opencode/opencode.jsonc
+Mimo/mimocode.jsonc|~/.config/mimocode/mimocode.jsonc
 Goose/config.yaml|~/.config/goose/config.yaml
 EOF
 
@@ -149,5 +151,6 @@ Gemini/settings.json|~/.gemini/settings.json
 Gemini/mcp-server-enablement.json|~/.gemini/mcp-server-enablement.json
 Qwen/settings.json|~/.qwen/settings.json
 OpenCode/opencode.jsonc|~/.config/opencode/opencode.jsonc
+Mimo/mimocode.jsonc|~/.config/mimocode/mimocode.jsonc
 Goose/config.yaml|~/.config/goose/config.yaml
 EOF
