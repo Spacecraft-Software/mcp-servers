@@ -14,6 +14,7 @@
 #   BRAVE_API_KEY     YOUR_BRAVE_API_KEY          brave-search
 #   GITHUB_PAT        YOUR_GITHUB_PAT             github
 #   WORKSPACE_PATH    /path/to/your/workspace     filesystem
+
 #
 # Usage:
 #   CONTEXT7_API_KEY=ctx7sk-... BRAVE_API_KEY=... nu bin/fill-keys.nu

@@ -14,6 +14,7 @@
 #   BRAVE_API_KEY     YOUR_BRAVE_API_KEY          brave-search
 #   GITHUB_PAT        YOUR_GITHUB_PAT             github
 #   WORKSPACE_PATH    /path/to/your/workspace     filesystem
+
 #
 # Requires: sd (https://github.com/chmln/sd — `cargo install sd` or `nix run nixpkgs#sd`).
 

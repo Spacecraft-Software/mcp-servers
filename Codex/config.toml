@@ -44,3 +44,6 @@ BRAVE_API_KEY = "YOUR_BRAVE_API_KEY"
 [mcp_servers.sequential-thinking]
 command = "npx"
 args = ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+
+[mcp_servers.crates]
+command = "crates-mcp"

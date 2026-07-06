@@ -43,6 +43,9 @@
     "sequential-thinking": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+    },
+    "crates": {
+      "command": "crates-mcp"
     }
   }
 }

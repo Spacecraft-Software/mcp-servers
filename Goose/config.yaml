@@ -82,3 +82,9 @@ extensions:
       - "@modelcontextprotocol/server-sequential-thinking"
     enabled: true
     timeout: 300
+  crates:
+    name: crates
+    type: stdio
+    cmd: crates-mcp
+    enabled: true
+    timeout: 300

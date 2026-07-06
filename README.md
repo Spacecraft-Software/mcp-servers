@@ -15,6 +15,7 @@ host's own dialect. They all wire up the same nine servers:
 | **memory** | stdio | `npx -y @modelcontextprotocol/server-memory` — knowledge-graph memory | none |
 | **brave-search** | stdio | `npx -y @modelcontextprotocol/server-brave-search` — web search | `BRAVE_API_KEY` |
 | **sequential-thinking** | stdio | `npx -y @modelcontextprotocol/server-sequential-thinking` — step-by-step reasoning | none |
+| **crates** | stdio | `crates-mcp` ([crates-mcp](https://crates.io/crates/crates-mcp) via `cargo install`) — Rust crate search and docs | none |
 
 The `npx`-based servers need Node.js 18+. `github`, `brave-search`, and `filesystem`
 need a token or path filled in before they work (see Notes).
