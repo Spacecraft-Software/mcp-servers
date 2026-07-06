@@ -35,6 +35,7 @@ need a token or path filled in before they work (see Notes).
 | `Gemini/` | Gemini CLI | `~/.gemini/settings.json` |
 | `Qwen/` | Qwen Code | `~/.qwen/settings.json` |
 | `OpenCode/` | opencode | `~/.config/opencode/opencode.jsonc` |
+| `Mimo/` | Mimo Code | `~/.config/mimocode/mimocode.jsonc` |
 | `Goose/` | goose | `~/.config/goose/config.yaml` |
 
 ## Notes

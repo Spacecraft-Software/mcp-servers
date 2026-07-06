@@ -109,6 +109,7 @@ paths are noted below.
 | `Gemini/settings.json` (+ `mcp-server-enablement.json`) | Gemini CLI · `~/.gemini/` | `mcpServers`; http = `url` + `type:"http"` + `headers`; servers must also be enabled in `mcp-server-enablement.json` |
 | `Qwen/settings.json` | Qwen Code · `~/.qwen/settings.json` | `mcpServers`; **http = `httpUrl`** (no `type`/`url`) + `headers` |
 | `OpenCode/opencode.jsonc` | opencode · `~/.config/opencode/opencode.jsonc` | `mcp` block; local = `type:"local"` + `command:[…]`; remote = `type:"remote"` + `url` + `headers` + `enabled` |
+| `Mimo/mimocode.jsonc` | Mimo Code · `~/.config/mimocode/mimocode.jsonc` | identical to opencode (it's a fork) |
 | `Goose/config.yaml` | goose · `~/.config/goose/config.yaml` | YAML `extensions:`; stdio = `type:stdio` + `cmd`/`args`; remote = `type:streamable_http` + `uri` + `headers` |
 
 All files describe the **same logical set of servers** but are not interchangeable —
@@ -116,7 +117,7 @@ key names, nesting, and the HTTP transport field all differ per host. When addin
 changing a server, update **every** file in its respective dialect. The fastest way to
 get a tool's exact current schema is its own CLI: `claude mcp add`, `codex mcp add`,
 `gemini mcp add`, `qwen mcp add`, `grok mcp add` (and `<tool> mcp list` to verify).
-Copilot CLI, opencode, goose, and Kimi have no scriptable add command — hand-edit
+Copilot CLI, opencode, mimo, goose, and Kimi have no scriptable add command — hand-edit
 those files. Mind the traps: **Qwen uses `httpUrl`** while Gemini uses `url`+`type`;
 **Codex uses `http_headers`** while Grok/Kimi use `headers`; Copilot CLI omits the
 `mcpServers` wrapper; Gemini needs the separate enablement file and a trusted folder.

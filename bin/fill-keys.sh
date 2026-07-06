@@ -127,6 +127,7 @@ Gemini/settings.json|~/.gemini/settings.json
 Gemini/mcp-server-enablement.json|~/.gemini/mcp-server-enablement.json
 Qwen/settings.json|~/.qwen/settings.json
 OpenCode/opencode.jsonc|~/.config/opencode/opencode.jsonc
+Mimo/mimocode.jsonc|~/.config/mimocode/mimocode.jsonc
 Goose/config.yaml|~/.config/goose/config.yaml
 EOF
 
@@ -150,5 +151,6 @@ Gemini/settings.json|~/.gemini/settings.json
 Gemini/mcp-server-enablement.json|~/.gemini/mcp-server-enablement.json
 Qwen/settings.json|~/.qwen/settings.json
 OpenCode/opencode.jsonc|~/.config/opencode/opencode.jsonc
+Mimo/mimocode.jsonc|~/.config/mimocode/mimocode.jsonc
 Goose/config.yaml|~/.config/goose/config.yaml
 EOF
