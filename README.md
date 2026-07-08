@@ -24,7 +24,7 @@ need a token or path filled in before they work (see Notes).
 
 | Directory | Host | Live config path |
 |-----------|------|------------------|
-| `Antigravity/` | Antigravity | editor-managed |
+| `Antigravity/` | Antigravity | `~/.gemini/config/mcp_config.json` (CLI)<br>`~/.gemini/antigravity/mcp_config.json` (2.0)<br>`~/.gemini/antigravity-ide/mcp_config.json` (IDE) |
 | `VSCode/` | VS Code | `.vscode/mcp.json` |
 | `GitHubCopilotCLI/` | GitHub Copilot CLI | `~/.copilot/mcp-config.json` |
 | `ClaudeCode/` | Claude Code | `~/.claude.json` |
