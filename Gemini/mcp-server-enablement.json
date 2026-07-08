@@ -8,17 +8,11 @@
   "microsoft-learn": {
     "enabled": true
   },
-  "github": {
-    "enabled": true
-  },
   "filesystem": {
     "enabled": true
   },
   "fetch": {
     "enabled": true
-  },
-  "memory": {
-    "enabled": false
   },
   "engram": {
     "enabled": true
@@ -27,6 +21,9 @@
     "enabled": true
   },
   "sequential-thinking": {
+    "enabled": true
+  },
+  "perplexity": {
     "enabled": true
   },
   "crates": {

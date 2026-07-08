@@ -14,13 +14,7 @@
       "serverUrl": "https://learn.microsoft.com/api/mcp",
       "disabled": false
     },
-    "github": {
-      "serverUrl": "https://api.githubcopilot.com/mcp/",
-      "headers": {
-        "Authorization": "Bearer YOUR_GITHUB_PAT"
-      },
-      "disabled": false
-    },
+
     "filesystem": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-filesystem", "/spacecraft-software"]
@@ -29,11 +23,7 @@
       "command": "uvx",
       "args": ["mcp-server-fetch"]
     },
-    "memory": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-memory"],
-      "disabled": true
-    },
+
     "engram": {
       "command": "engram",
       "args": ["--db", "/home/mj/.gemini/engram.db", "mcp"],
@@ -41,7 +31,7 @@
     },
     "brave-search": {
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+      "args": ["-y", "@brave/brave-search-mcp-server"],
       "env": {
         "BRAVE_API_KEY": "YOUR_BRAVE_API_KEY"
       }
@@ -49,6 +39,13 @@
     "sequential-thinking": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+    },
+    "perplexity": {
+      "command": "npx",
+      "args": ["-y", "perplexity-mcp"],
+      "env": {
+        "PERPLEXITY_API_KEY": "YOUR_PERPLEXITY_API_KEY"
+      }
     },
     "crates": {
       "command": "crates-mcp"

@@ -12,7 +12,7 @@
 #   Env var          Fills placeholder           Server
 #   CONTEXT7_API_KEY  YOUR_CONTEXT7_API_KEY       context7
 #   BRAVE_API_KEY     YOUR_BRAVE_API_KEY          brave-search
-#   GITHUB_PAT        YOUR_GITHUB_PAT             github
+#   PERPLEXITY_API_KEY YOUR_PERPLEXITY_API_KEY    perplexity
 #   (filesystem path is now hardcoded to /spacecraft-software in the templates)
 
 #
@@ -27,7 +27,7 @@ Usage: fill-keys.sh [--out DIR]
   --out DIR   output directory (gitignored), relative to the repo root [default: dist]
   -h, --help  show this help
 
-Env vars: CONTEXT7_API_KEY, BRAVE_API_KEY, GITHUB_PAT
+Env vars: CONTEXT7_API_KEY, BRAVE_API_KEY, PERPLEXITY_API_KEY
 EOF
 }
 
@@ -99,7 +99,7 @@ while IFS='|' read -r placeholder envvar secret; do
 done <<'EOF'
 YOUR_CONTEXT7_API_KEY|CONTEXT7_API_KEY|1
 YOUR_BRAVE_API_KEY|BRAVE_API_KEY|1
-YOUR_GITHUB_PAT|GITHUB_PAT|1
+YOUR_PERPLEXITY_API_KEY|PERPLEXITY_API_KEY|1
 EOF
 
 written=0

@@ -18,13 +18,6 @@ CONTEXT7_API_KEY = "YOUR_CONTEXT7_API_KEY"
 url = "https://learn.microsoft.com/api/mcp"
 enabled = true
 
-[mcp_servers.github]
-url = "https://api.githubcopilot.com/mcp/"
-enabled = true
-
-[mcp_servers.github.headers]
-Authorization = "Bearer YOUR_GITHUB_PAT"
-
 [mcp_servers.filesystem]
 command = "npx"
 args = ["-y", "@modelcontextprotocol/server-filesystem", "/spacecraft-software"]
@@ -35,11 +28,6 @@ command = "uvx"
 args = ["mcp-server-fetch"]
 enabled = true
 
-[mcp_servers.memory]
-command = "npx"
-args = ["-y", "@modelcontextprotocol/server-memory"]
-enabled = false
-
 [mcp_servers.engram]
 command = "engram"
 args = ["--db", "/home/mj/.gemini/engram.db", "mcp"]
@@ -47,7 +35,7 @@ enabled = true
 
 [mcp_servers.brave-search]
 command = "npx"
-args = ["-y", "@modelcontextprotocol/server-brave-search"]
+args = ["-y", "@brave/brave-search-mcp-server"]
 enabled = true
 
 [mcp_servers.brave-search.env]
@@ -57,6 +45,14 @@ BRAVE_API_KEY = "YOUR_BRAVE_API_KEY"
 command = "npx"
 args = ["-y", "@modelcontextprotocol/server-sequential-thinking"]
 enabled = true
+
+[mcp_servers.perplexity]
+command = "npx"
+args = ["-y", "perplexity-mcp"]
+enabled = true
+
+[mcp_servers.perplexity.env]
+PERPLEXITY_API_KEY = "YOUR_PERPLEXITY_API_KEY"
 
 [mcp_servers.crates]
 command = "crates-mcp"

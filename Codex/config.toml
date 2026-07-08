@@ -16,11 +16,7 @@ CONTEXT7_API_KEY = "YOUR_CONTEXT7_API_KEY"
 [mcp_servers.microsoft-learn]
 url = "https://learn.microsoft.com/api/mcp"
 
-[mcp_servers.github]
-url = "https://api.githubcopilot.com/mcp/"
 
-[mcp_servers.github.http_headers]
-Authorization = "Bearer YOUR_GITHUB_PAT"
 
 [mcp_servers.filesystem]
 command = "npx"
@@ -36,7 +32,7 @@ args = ["--db", "/home/mj/.gemini/engram.db", "mcp"]
 
 [mcp_servers.brave-search]
 command = "npx"
-args = ["-y", "@modelcontextprotocol/server-brave-search"]
+args = ["-y", "@brave/brave-search-mcp-server"]
 
 [mcp_servers.brave-search.env]
 BRAVE_API_KEY = "YOUR_BRAVE_API_KEY"
@@ -44,6 +40,13 @@ BRAVE_API_KEY = "YOUR_BRAVE_API_KEY"
 [mcp_servers.sequential-thinking]
 command = "npx"
 args = ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+
+[mcp_servers.perplexity]
+command = "npx"
+args = ["-y", "perplexity-mcp"]
+
+[mcp_servers.perplexity.env]
+PERPLEXITY_API_KEY = "YOUR_PERPLEXITY_API_KEY"
 
 [mcp_servers.crates]
 command = "crates-mcp"

@@ -15,13 +15,6 @@
     "type": "http",
     "url": "https://learn.microsoft.com/api/mcp"
   },
-  "github": {
-    "type": "http",
-    "url": "https://api.githubcopilot.com/mcp/",
-    "headers": {
-      "Authorization": "Bearer YOUR_GITHUB_PAT"
-    }
-  },
   "filesystem": {
     "command": "npx",
     "args": ["-y", "@modelcontextprotocol/server-filesystem", "/spacecraft-software"],
@@ -39,7 +32,7 @@
   },
   "brave-search": {
     "command": "npx",
-    "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+    "args": ["-y", "@brave/brave-search-mcp-server"],
     "type": "stdio",
     "env": {
       "BRAVE_API_KEY": "YOUR_BRAVE_API_KEY"
@@ -49,6 +42,14 @@
     "command": "npx",
     "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
     "type": "stdio"
+  },
+  "perplexity": {
+    "command": "npx",
+    "args": ["-y", "perplexity-mcp"],
+    "type": "stdio",
+    "env": {
+      "PERPLEXITY_API_KEY": "YOUR_PERPLEXITY_API_KEY"
+    }
   },
   "crates": {
     "command": "crates-mcp",

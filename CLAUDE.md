@@ -31,16 +31,15 @@ The only meaningful validation is that each config is well-formed JSON/TOML/YAML
 - **Fill placeholders**: Use the fill-keys scripts to substitute API key placeholders with real values:
   ```bash
   # POSIX/Bash/Brush
-  CONTEXT7_API_KEY=your_key BRAVE_API_KEY=your_key GITHUB_PAT=your_pat \
+  CONTEXT7_API_KEY=your_key BRAVE_API_KEY=your_key \
     sh bin/fill-keys.sh
   
   # Nushell
   $env:CONTEXT7_API_KEY="your_key" $env:BRAVE_API_KEY="your_key" \
-    $env:GITHUB_PAT="your_pat" \
     nu bin/fill-keys.nu
   
   # Ion
-  CONTEXT7_API_KEY=your_key BRAVE_API_KEY=your_key GITHUB_PAT=your_pat \
+  CONTEXT7_API_KEY=your_key BRAVE_API_KEY=your_key \
     ion bin/fill-keys.ion
   ```
   Filled configs are written to `dist/` directory (gitignored).
@@ -71,7 +70,7 @@ To add support for a new MCP-capable tool:
 
 1. **Create new directory**: Named after the host tool (case-sensitive)
 2. **Add config template**: Follow the host's schema (use `host mcp add` if available)
-3. **Include all nine servers**: Maintain consistency across hosts
+3. **Include all ten servers**: Maintain consistency across hosts
 4. **Add to fill-keys scripts**: Update the host-file list in all three shell scripts
 5. **Update README**: Add to the supported hosts table
 6. **Update CLAUDE.md**: Add to the layout table with schema notes
@@ -91,7 +90,7 @@ This repo carries the Standard §5.2 posture files and §4.3 REUSE metadata:
 Each directory is named after the host application that consumes the file. The
 files are **templates**; each holds only the MCP-relevant fragment (never a copy of a
 tool's full personal config, which would carry auth tokens). Each template declares the
-full **nine-server superset** (see below). Note this differs from the maintainer's live
+full **ten-server superset** (see below). Note this differs from the maintainer's live
 machine configs, which run only the three real servers — the six generic `npx`/token
 servers ship in the templates as placeholders, not in the live configs. Host config
 paths are noted below.
@@ -124,7 +123,7 @@ those files. Mind the traps: **Qwen uses `httpUrl`** while Gemini uses `url`+`ty
 
 ## The servers being configured
 
-Every host template declares all nine. Two groups:
+Every host template declares all ten. Two groups:
 
 **The four "real" servers** (these run in the maintainer's live configs):
 - **nixos** — `mcp-nixos` (queries nixpkgs / NixOS options). Antigravity runs the `mcp-nixos` binary directly; everywhere else it's `nix run github:utensils/mcp-nixos --` over stdio.
@@ -132,21 +131,21 @@ Every host template declares all nine. Two groups:
 - **microsoft-learn** — HTTP, `https://learn.microsoft.com/api/mcp`, no auth.
 - **crates** — stdio, `crates-mcp` ([crates-mcp](https://crates.io/crates/crates-mcp) via `cargo install`), queries Rust crates from crates.io and docs.rs.
 
-**The six generic servers** (came in via the merged Copilot PRs; templates-only, placeholders):
-- **github** — HTTP, `https://api.githubcopilot.com/mcp/`, `Authorization: Bearer YOUR_GITHUB_PAT` (VS Code uses built-in Copilot auth, no header).
+**The six generic servers** (templates-only, placeholders):
 - **filesystem** — stdio, `npx -y @modelcontextprotocol/server-filesystem <path>`. Hardcoded path `/spacecraft-software` across all hosts.
-- **fetch**, **memory** (disabled), **engram**, **sequential-thinking** — stdio, `npx -y @modelcontextprotocol/server-{fetch,memory,sequential-thinking}` / `engram --db ~/.gemini/engram.db mcp`, no auth.
-- **brave-search** — stdio, `npx -y @modelcontextprotocol/server-brave-search`, env `BRAVE_API_KEY=YOUR_BRAVE_API_KEY`.
+- **fetch**, **engram**, **sequential-thinking** — stdio, `npx -y @modelcontextprotocol/server-{fetch,sequential-thinking}` / `engram --db ~/.gemini/engram.db mcp`, no auth.
+- **brave-search** — stdio, `npx -y @brave/brave-search-mcp-server` ([brave-search-mcp-server](https://github.com/brave/brave-search-mcp-server)), env `BRAVE_API_KEY=YOUR_BRAVE_API_KEY`.
+- **perplexity** — stdio, `npx -y perplexity-mcp`, env `PERPLEXITY_API_KEY=YOUR_PERPLEXITY_API_KEY`.
 
 ## Conventions
 
 - Antigravity's file uses **2-space** indentation; VS Code's uses **tabs**. Preserve each file's existing style. Host directory names are **case-sensitive and canonical** (`Antigravity/`, `VSCode/`) — do not reintroduce lowercase `antigravity/` or `.vscode/` variants (a past PR did; they were consolidated).
-- Never commit a real secret — templates carry placeholders (`YOUR_CONTEXT7_API_KEY`, `YOUR_GITHUB_PAT`, `YOUR_BRAVE_API_KEY`). The filesystem server uses the hardcoded `/spacecraft-software` path. Servers needing placeholders stay inert until filled in locally.
+- Never commit a real secret — templates carry placeholders (`YOUR_CONTEXT7_API_KEY`, `YOUR_BRAVE_API_KEY`, `YOUR_PERPLEXITY_API_KEY`). The filesystem server uses the hardcoded `/spacecraft-software` path. Servers needing placeholders stay inert until filled in locally.
 - Templates are the **canonical superset**; the maintainer's live machine runs the three real servers only. When changing a server, update **every** host template in its dialect (and the live config too, for the three real servers).
 
 ## Tooling
 
-`bin/fill-keys.{nu,sh,ion}` substitute the three placeholder tokens (`YOUR_CONTEXT7_API_KEY`, `YOUR_BRAVE_API_KEY`, `YOUR_GITHUB_PAT`) with values from env vars (prompting for any unset ones when interactive) and write filled copies into a **gitignored `dist/` mirror** — they never edit the tracked templates, so the no-secrets rule holds. There are three parallel ports (Nushell, POSIX/Bash/Brush, Ion) with identical behavior — **change all three together**, plus their shared host-file list (the docs and VS Code's `${input:}` field is deliberately left out). The `.sh`/`.ion` ports shell out to `sd` (literal `-s` mode); the `.nu` port uses native string ops. These are the only executables (`755`); everything else is `644` data. Shell-specific gotchas worth knowing if you edit them: Ion's `test -t` is unreliable (use `tty -s`), Ion eats `-h`/`--help`, and Ion's `test` needs the POSIX `x`-prefix guard for `--`-leading operands.
+`bin/fill-keys.{nu,sh,ion}` substitute the three placeholder tokens (`YOUR_CONTEXT7_API_KEY`, `YOUR_BRAVE_API_KEY`, `YOUR_PERPLEXITY_API_KEY`) with values from env vars (prompting for any unset ones when interactive) and write filled copies into a **gitignored `dist/` mirror** — they never edit the tracked templates, so the no-secrets rule holds. There are three parallel ports (Nushell, POSIX/Bash/Brush, Ion) with identical behavior — **change all three together**, plus their shared host-file list (the docs and VS Code's `${input:}` field is deliberately left out). The `.sh`/`.ion` ports shell out to `sd` (literal `-s` mode); the `.nu` port uses native string ops. These are the only executables (`755`); everything else is `644` data. Shell-specific gotchas worth knowing if you edit them: Ion's `test -t` is unreliable (use `tty -s`), Ion eats `-h`/`--help`, and Ion's `test` needs the POSIX `x`-prefix guard for `--`-leading operands.
 
 ## Code Architecture and Structure
 
@@ -155,7 +154,7 @@ Every host template declares all nine. Two groups:
 The repository follows a **multi-host template pattern** where:
 
 1. **Each host directory** contains a single config file in that host's native format
-2. **All configs declare the same nine servers** but in different dialects
+2. **All configs declare the same ten servers** but in different dialects
 3. **Templates use placeholders** for secrets that get filled at deployment time
 4. **No real secrets are committed** - placeholders ensure safety
 
@@ -195,7 +194,7 @@ Host Applications (local config paths)
 ### Important Constraints
 
 1. **No Secrets in Git**: Placeholders ensure no API keys are ever committed
-2. **Schema Consistency**: All hosts must declare the same nine servers
+2. **Schema Consistency**: All hosts must declare the same ten servers
 3. **Dialect Variations**: Each host uses different field names for the same concepts
 4. **REUSE Compliance**: All files licensed GPL-3.0-or-later via REUSE.toml
 5. **Signed Commits**: All commits must be cryptographically signed (§6.3)

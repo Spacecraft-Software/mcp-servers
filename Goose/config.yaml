@@ -26,14 +26,6 @@ extensions:
     uri: https://learn.microsoft.com/api/mcp
     enabled: true
     timeout: 300
-  github:
-    name: github
-    type: streamable_http
-    uri: https://api.githubcopilot.com/mcp/
-    headers:
-      Authorization: Bearer YOUR_GITHUB_PAT
-    enabled: true
-    timeout: 300
   filesystem:
     name: filesystem
     type: stdio
@@ -52,15 +44,6 @@ extensions:
       - mcp-server-fetch
     enabled: true
     timeout: 300
-  memory:
-    name: memory
-    type: stdio
-    cmd: npx
-    args:
-      - -y
-      - "@modelcontextprotocol/server-memory"
-    enabled: false
-    timeout: 300
   engram:
     name: engram
     type: stdio
@@ -77,7 +60,7 @@ extensions:
     cmd: npx
     args:
       - -y
-      - "@modelcontextprotocol/server-brave-search"
+      - "@brave/brave-search-mcp-server"
     envs:
       BRAVE_API_KEY: YOUR_BRAVE_API_KEY
     enabled: true
@@ -89,6 +72,17 @@ extensions:
     args:
       - -y
       - "@modelcontextprotocol/server-sequential-thinking"
+    enabled: true
+    timeout: 300
+  perplexity:
+    name: perplexity
+    type: stdio
+    cmd: npx
+    args:
+      - -y
+      - perplexity-mcp
+    envs:
+      PERPLEXITY_API_KEY: YOUR_PERPLEXITY_API_KEY
     enabled: true
     timeout: 300
   crates:

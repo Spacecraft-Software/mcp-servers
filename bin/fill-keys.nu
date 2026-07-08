@@ -12,7 +12,7 @@
 #   Env var          Fills placeholder           Server
 #   CONTEXT7_API_KEY  YOUR_CONTEXT7_API_KEY       context7
 #   BRAVE_API_KEY     YOUR_BRAVE_API_KEY          brave-search
-#   GITHUB_PAT        YOUR_GITHUB_PAT             github
+#   PERPLEXITY_API_KEY YOUR_PERPLEXITY_API_KEY    perplexity
 #   (filesystem path is now hardcoded to /spacecraft-software in the templates)
 
 #
@@ -26,7 +26,7 @@ const TOKENS = [
     [placeholder                  env_var            secret];
     ["YOUR_CONTEXT7_API_KEY"      "CONTEXT7_API_KEY"  true ]
     ["YOUR_BRAVE_API_KEY"         "BRAVE_API_KEY"     true ]
-    ["YOUR_GITHUB_PAT"            "GITHUB_PAT"        true ]
+    ["YOUR_PERPLEXITY_API_KEY"    "PERPLEXITY_API_KEY" true ]
 ]
 
 # Host config templates and where each filled copy is meant to be installed.

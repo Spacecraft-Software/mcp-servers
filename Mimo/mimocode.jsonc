@@ -19,14 +19,6 @@
       "url": "https://learn.microsoft.com/api/mcp",
       "enabled": true
     },
-    "github": {
-      "type": "remote",
-      "url": "https://api.githubcopilot.com/mcp/",
-      "headers": {
-        "Authorization": "Bearer YOUR_GITHUB_PAT"
-      },
-      "enabled": true
-    },
     "filesystem": {
       "type": "local",
       "command": ["npx", "-y", "@modelcontextprotocol/server-filesystem", "/spacecraft-software"],
@@ -37,11 +29,6 @@
       "command": ["uvx", "mcp-server-fetch"],
       "enabled": true
     },
-    "memory": {
-      "type": "local",
-      "command": ["npx", "-y", "@modelcontextprotocol/server-memory"],
-      "enabled": false
-    },
     "engram": {
       "type": "local",
       "command": ["engram", "--db", "/home/mj/.gemini/engram.db", "mcp"],
@@ -49,7 +36,7 @@
     },
     "brave-search": {
       "type": "local",
-      "command": ["npx", "-y", "@modelcontextprotocol/server-brave-search"],
+      "command": ["npx", "-y", "@brave/brave-search-mcp-server"],
       "environment": {
         "BRAVE_API_KEY": "YOUR_BRAVE_API_KEY"
       },
@@ -58,6 +45,14 @@
     "sequential-thinking": {
       "type": "local",
       "command": ["npx", "-y", "@modelcontextprotocol/server-sequential-thinking"],
+      "enabled": true
+    },
+    "perplexity": {
+      "type": "local",
+      "command": ["npx", "-y", "perplexity-mcp"],
+      "environment": {
+        "PERPLEXITY_API_KEY": "YOUR_PERPLEXITY_API_KEY"
+      },
       "enabled": true
     }
   }

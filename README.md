@@ -2,23 +2,22 @@
 
 Per-tool **MCP (Model Context Protocol) server configurations** for the coding agents
 and editors I use. Each directory holds the MCP config fragment for one host, in that
-host's own dialect. They all wire up the same nine servers:
+host's own dialect. They all wire up the same ten servers:
 
 | Server | Transport | Endpoint / command | Auth |
 |--------|-----------|--------------------|------|
 | **nixos** | stdio | `nix run github:utensils/mcp-nixos --` ([mcp-nixos](https://github.com/utensils/mcp-nixos)) — nixpkgs / NixOS options | none |
 | **context7** | http | `https://mcp.context7.com/mcp` — Upstash Context7 library docs | `CONTEXT7_API_KEY` |
 | **microsoft-learn** | http | `https://learn.microsoft.com/api/mcp` — Microsoft Learn docs | none |
-| **github** | http | `https://api.githubcopilot.com/mcp/` — GitHub API (repos, PRs, issues, code search) | GitHub PAT |
 | **filesystem** | stdio | `npx -y @modelcontextprotocol/server-filesystem <path>` — sandboxed file access | none (set a path) |
 | **fetch** | stdio | `uvx mcp-server-fetch` — fetch live web content | none |
-| **memory** | stdio | `npx -y @modelcontextprotocol/server-memory` — knowledge-graph memory (disabled) | none |
 | **engram** | stdio | `engram --db ~/.gemini/engram.db mcp` — shared verbatim chat memory | none |
-| **brave-search** | stdio | `npx -y @modelcontextprotocol/server-brave-search` — web search | `BRAVE_API_KEY` |
+| **brave-search** | stdio | `npx -y @brave/brave-search-mcp-server` — web, local, news, image, video search | `BRAVE_API_KEY` |
+| **perplexity** | stdio | `npx -y perplexity-mcp` — Perplexity search | `PERPLEXITY_API_KEY` |
 | **sequential-thinking** | stdio | `npx -y @modelcontextprotocol/server-sequential-thinking` — step-by-step reasoning | none |
 | **crates** | stdio | `crates-mcp` ([crates-mcp](https://crates.io/crates/crates-mcp) via `cargo install`) — Rust crate search and docs | none |
 
-The `npx`-based servers need Node.js 18+. `github`, `brave-search`, and `filesystem`
+The `npx`-based servers need Node.js 18+. `brave-search`, `perplexity`, and `filesystem`
 need a token or path filled in before they work (see Notes).
 
 ## Supported hosts
@@ -42,10 +41,11 @@ need a token or path filled in before they work (see Notes).
 ## Notes
 
 - Files are **templates** with placeholders — replace these locally, never commit real
-  values: `YOUR_CONTEXT7_API_KEY`, `YOUR_GITHUB_PAT`, `YOUR_BRAVE_API_KEY`, and the
-  `filesystem` server's `/spacecraft-software`. Until they're filled in, those servers
-  won't connect (the other servers work as-is). VS Code instead prompts for the Context7
-  and Brave keys via its `inputs` mechanism, and uses built-in Copilot auth for `github`.
+  values: `YOUR_CONTEXT7_API_KEY`, `YOUR_BRAVE_API_KEY`, `YOUR_PERPLEXITY_API_KEY`. The
+  `filesystem` server uses the hardcoded path `/spacecraft-software`. Until placeholders
+  are filled in, those servers won't connect (the other servers work as-is). VS Code
+  instead prompts for the Context7, Brave, and Perplexity keys via its `inputs`
+  mechanism.
 - Schemas differ per host (e.g. Qwen uses `httpUrl`, Codex uses `http_headers`, Copilot
   CLI omits the `mcpServers` wrapper). See `CLAUDE.md` for the full per-host schema table.
 
@@ -66,13 +66,12 @@ modified, so no secret is ever committed. The same tool is provided for three sh
 |---------|-------|--------|
 | `CONTEXT7_API_KEY` | `YOUR_CONTEXT7_API_KEY` | context7 |
 | `BRAVE_API_KEY` | `YOUR_BRAVE_API_KEY` | brave-search |
-| `GITHUB_PAT` | `YOUR_GITHUB_PAT` | github |
-| *(hardcoded)* | `/spacecraft-software` | filesystem |
+| `PERPLEXITY_API_KEY` | `YOUR_PERPLEXITY_API_KEY` | perplexity |
 
 ```sh
 # Provide values via env vars (any you omit are prompted for, or left as placeholders
 # when run non-interactively). Use whichever script matches your shell:
-CONTEXT7_API_KEY=ctx7sk-... BRAVE_API_KEY=... GITHUB_PAT=ghp_... \
+CONTEXT7_API_KEY=ctx7sk-... BRAVE_API_KEY=... PERPLEXITY_API_KEY=pplx-... \
   nu bin/fill-keys.nu          # or: sh bin/fill-keys.sh  /  ion bin/fill-keys.ion
 
 nu bin/fill-keys.nu --help        # options (Nushell/POSIX; Ion: see header)

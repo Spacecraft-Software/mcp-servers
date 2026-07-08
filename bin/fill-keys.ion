@@ -12,7 +12,7 @@
 #   Env var          Fills placeholder           Server
 #   CONTEXT7_API_KEY  YOUR_CONTEXT7_API_KEY       context7
 #   BRAVE_API_KEY     YOUR_BRAVE_API_KEY          brave-search
-#   GITHUB_PAT        YOUR_GITHUB_PAT             github
+#   PERPLEXITY_API_KEY YOUR_PERPLEXITY_API_KEY    perplexity
 #   (filesystem path is now hardcoded to /spacecraft-software in the templates)
 
 #
@@ -27,7 +27,7 @@ fn usage
     echo "  --out DIR   output directory (gitignored), relative to the repo root [default: dist]"
     echo "  -h, --help  show this help"
     echo ""
-    echo "Env vars: CONTEXT7_API_KEY, BRAVE_API_KEY, GITHUB_PAT"
+    echo "Env vars: CONTEXT7_API_KEY, BRAVE_API_KEY, PERPLEXITY_API_KEY"
 end
 
 # Hidden/plain prompt on the controlling terminal; echoes the typed value to stdout.
@@ -121,12 +121,12 @@ if test -z "$v_brave" && test "x$interactive" = "x1"
     let v_brave = $(promptval "BRAVE_API_KEY [blank to skip]: " "1")
 end
 
-let v_pat = ""
-if exists -s GITHUB_PAT
-    let v_pat = $GITHUB_PAT
+let v_perp = ""
+if exists -s PERPLEXITY_API_KEY
+    let v_perp = $PERPLEXITY_API_KEY
 end
-if test -z "$v_pat" && test "x$interactive" = "x1"
-    let v_pat = $(promptval "GITHUB_PAT [blank to skip]: " "1")
+if test -z "$v_perp" && test "x$interactive" = "x1"
+    let v_perp = $(promptval "PERPLEXITY_API_KEY [blank to skip]: " "1")
 end
 
 let filled = 0
@@ -144,11 +144,11 @@ if test -n "$v_brave"
 else
     let skipped_names ++= " BRAVE_API_KEY"
 end
-if test -n "$v_pat"
+if test -n "$v_perp"
     let filled += 1
-    let filled_names ++= " GITHUB_PAT"
+    let filled_names ++= " PERPLEXITY_API_KEY"
 else
-    let skipped_names ++= " GITHUB_PAT"
+    let skipped_names ++= " PERPLEXITY_API_KEY"
 end
 
 # --- write filled copies ---
@@ -172,8 +172,8 @@ for src in [ "Antigravity/mcp_config.json" "VSCode/mcp.json" "GitHubCopilotCLI/m
     if test -n "$v_brave"
         sd -s "YOUR_BRAVE_API_KEY" $v_brave $dst
     end
-    if test -n "$v_pat"
-        sd -s "YOUR_GITHUB_PAT" $v_pat $dst
+    if test -n "$v_perp"
+        sd -s "YOUR_PERPLEXITY_API_KEY" $v_perp $dst
     end
     let written += 1
 end

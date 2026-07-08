@@ -20,10 +20,6 @@
 			"type": "http",
 			"url": "https://learn.microsoft.com/api/mcp"
 		},
-		"github": {
-			"type": "http",
-			"url": "https://api.githubcopilot.com/mcp/"
-		},
 		"filesystem": {
 			"type": "stdio",
 			"command": "npx",
@@ -54,7 +50,7 @@
 			"command": "npx",
 			"args": [
 				"-y",
-				"@modelcontextprotocol/server-brave-search"
+				"@brave/brave-search-mcp-server"
 			],
 			"env": {
 				"BRAVE_API_KEY": "${input:BRAVE_API_KEY}"
@@ -67,6 +63,17 @@
 				"-y",
 				"@modelcontextprotocol/server-sequential-thinking"
 			]
+		},
+		"perplexity": {
+			"type": "stdio",
+			"command": "npx",
+			"args": [
+				"-y",
+				"perplexity-mcp"
+			],
+			"env": {
+				"PERPLEXITY_API_KEY": "${input:PERPLEXITY_API_KEY}"
+			}
 		},
 		"crates": {
 			"type": "stdio",
@@ -84,6 +91,12 @@
 			"id": "BRAVE_API_KEY",
 			"type": "promptString",
 			"description": "Brave Search API key",
+			"password": true
+		},
+		{
+			"id": "PERPLEXITY_API_KEY",
+			"type": "promptString",
+			"description": "Perplexity API key",
 			"password": true
 		}
 	]
