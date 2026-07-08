@@ -13,7 +13,7 @@
 #   CONTEXT7_API_KEY  YOUR_CONTEXT7_API_KEY       context7
 #   BRAVE_API_KEY     YOUR_BRAVE_API_KEY          brave-search
 #   GITHUB_PAT        YOUR_GITHUB_PAT             github
-#   WORKSPACE_PATH    /path/to/your/workspace     filesystem
+#   (filesystem path is now hardcoded to /spacecraft-software in the templates)
 
 #
 # Usage:
@@ -27,7 +27,6 @@ const TOKENS = [
     ["YOUR_CONTEXT7_API_KEY"      "CONTEXT7_API_KEY"  true ]
     ["YOUR_BRAVE_API_KEY"         "BRAVE_API_KEY"     true ]
     ["YOUR_GITHUB_PAT"            "GITHUB_PAT"        true ]
-    ["/path/to/your/workspace"    "WORKSPACE_PATH"    false]
 ]
 
 # Host config templates and where each filled copy is meant to be installed.

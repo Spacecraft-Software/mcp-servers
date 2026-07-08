@@ -18,6 +18,9 @@
     "enabled": true
   },
   "memory": {
+    "enabled": false
+  },
+  "engram": {
     "enabled": true
   },
   "brave-search": {

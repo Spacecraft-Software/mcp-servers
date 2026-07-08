@@ -24,17 +24,17 @@
   },
   "filesystem": {
     "command": "npx",
-    "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/your/workspace"],
+    "args": ["-y", "@modelcontextprotocol/server-filesystem", "/spacecraft-software"],
     "type": "stdio"
   },
   "fetch": {
-    "command": "npx",
-    "args": ["-y", "@modelcontextprotocol/server-fetch"],
+    "command": "uvx",
+    "args": ["mcp-server-fetch"],
     "type": "stdio"
   },
-  "memory": {
-    "command": "npx",
-    "args": ["-y", "@modelcontextprotocol/server-memory"],
+  "engram": {
+    "command": "engram",
+    "args": ["--db", "/home/mj/.gemini/engram.db", "mcp"],
     "type": "stdio"
   },
   "brave-search": {

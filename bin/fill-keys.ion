@@ -13,7 +13,7 @@
 #   CONTEXT7_API_KEY  YOUR_CONTEXT7_API_KEY       context7
 #   BRAVE_API_KEY     YOUR_BRAVE_API_KEY          brave-search
 #   GITHUB_PAT        YOUR_GITHUB_PAT             github
-#   WORKSPACE_PATH    /path/to/your/workspace     filesystem
+#   (filesystem path is now hardcoded to /spacecraft-software in the templates)
 
 #
 # Requires: sd (cargo install sd / nix run nixpkgs#sd).
@@ -27,7 +27,7 @@ fn usage
     echo "  --out DIR   output directory (gitignored), relative to the repo root [default: dist]"
     echo "  -h, --help  show this help"
     echo ""
-    echo "Env vars: CONTEXT7_API_KEY, BRAVE_API_KEY, GITHUB_PAT, WORKSPACE_PATH"
+    echo "Env vars: CONTEXT7_API_KEY, BRAVE_API_KEY, GITHUB_PAT"
 end
 
 # Hidden/plain prompt on the controlling terminal; echoes the typed value to stdout.
@@ -129,14 +129,6 @@ if test -z "$v_pat" && test "x$interactive" = "x1"
     let v_pat = $(promptval "GITHUB_PAT [blank to skip]: " "1")
 end
 
-let v_ws = ""
-if exists -s WORKSPACE_PATH
-    let v_ws = $WORKSPACE_PATH
-end
-if test -z "$v_ws" && test "x$interactive" = "x1"
-    let v_ws = $(promptval "WORKSPACE_PATH [blank to skip]: " "0")
-end
-
 let filled = 0
 let filled_names = ""
 let skipped_names = ""
@@ -157,12 +149,6 @@ if test -n "$v_pat"
     let filled_names ++= " GITHUB_PAT"
 else
     let skipped_names ++= " GITHUB_PAT"
-end
-if test -n "$v_ws"
-    let filled += 1
-    let filled_names ++= " WORKSPACE_PATH"
-else
-    let skipped_names ++= " WORKSPACE_PATH"
 end
 
 # --- write filled copies ---
@@ -189,14 +175,11 @@ for src in [ "Antigravity/mcp_config.json" "VSCode/mcp.json" "GitHubCopilotCLI/m
     if test -n "$v_pat"
         sd -s "YOUR_GITHUB_PAT" $v_pat $dst
     end
-    if test -n "$v_ws"
-        sd -s "/path/to/your/workspace" $v_ws $dst
-    end
     let written += 1
 end
 
 # --- summary ---
-printf 'Filled %s of 4 placeholders into %s/ (%s files)\n' $filled $out_root $written
+printf 'Filled %s of 3 placeholders into %s/ (%s files)\n' $filled $out_root $written
 if test -n "$filled_names"
     printf 'Filled:%s\n' $filled_names
 end

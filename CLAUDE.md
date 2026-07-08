@@ -31,16 +31,16 @@ The only meaningful validation is that each config is well-formed JSON/TOML/YAML
 - **Fill placeholders**: Use the fill-keys scripts to substitute API key placeholders with real values:
   ```bash
   # POSIX/Bash/Brush
-  CONTEXT7_API_KEY=your_key BRAVE_API_KEY=your_key GITHUB_PAT=your_pat WORKSPACE_PATH=/your/path \
+  CONTEXT7_API_KEY=your_key BRAVE_API_KEY=your_key GITHUB_PAT=your_pat \
     sh bin/fill-keys.sh
   
   # Nushell
   $env:CONTEXT7_API_KEY="your_key" $env:BRAVE_API_KEY="your_key" \
-    $env:GITHUB_PAT="your_pat" $env:WORKSPACE_PATH="/your/path" \
+    $env:GITHUB_PAT="your_pat" \
     nu bin/fill-keys.nu
   
   # Ion
-  CONTEXT7_API_KEY=your_key BRAVE_API_KEY=your_key GITHUB_PAT=your_pat WORKSPACE_PATH=/your/path \
+  CONTEXT7_API_KEY=your_key BRAVE_API_KEY=your_key GITHUB_PAT=your_pat \
     ion bin/fill-keys.ion
   ```
   Filled configs are written to `dist/` directory (gitignored).
@@ -134,19 +134,19 @@ Every host template declares all nine. Two groups:
 
 **The six generic servers** (came in via the merged Copilot PRs; templates-only, placeholders):
 - **github** — HTTP, `https://api.githubcopilot.com/mcp/`, `Authorization: Bearer YOUR_GITHUB_PAT` (VS Code uses built-in Copilot auth, no header).
-- **filesystem** — stdio, `npx -y @modelcontextprotocol/server-filesystem <path>`. Placeholder path `/path/to/your/workspace` (VS Code uses `${workspaceFolder}`).
-- **fetch**, **memory**, **sequential-thinking** — stdio, `npx -y @modelcontextprotocol/server-{fetch,memory,sequential-thinking}`, no auth.
+- **filesystem** — stdio, `npx -y @modelcontextprotocol/server-filesystem <path>`. Hardcoded path `/spacecraft-software` across all hosts.
+- **fetch**, **memory** (disabled), **engram**, **sequential-thinking** — stdio, `npx -y @modelcontextprotocol/server-{fetch,memory,sequential-thinking}` / `engram --db ~/.gemini/engram.db mcp`, no auth.
 - **brave-search** — stdio, `npx -y @modelcontextprotocol/server-brave-search`, env `BRAVE_API_KEY=YOUR_BRAVE_API_KEY`.
 
 ## Conventions
 
 - Antigravity's file uses **2-space** indentation; VS Code's uses **tabs**. Preserve each file's existing style. Host directory names are **case-sensitive and canonical** (`Antigravity/`, `VSCode/`) — do not reintroduce lowercase `antigravity/` or `.vscode/` variants (a past PR did; they were consolidated).
-- Never commit a real secret — templates carry placeholders (`YOUR_CONTEXT7_API_KEY`, `YOUR_GITHUB_PAT`, `YOUR_BRAVE_API_KEY`) and the `/path/to/your/workspace` path. Servers needing them stay inert until filled in locally.
+- Never commit a real secret — templates carry placeholders (`YOUR_CONTEXT7_API_KEY`, `YOUR_GITHUB_PAT`, `YOUR_BRAVE_API_KEY`). The filesystem server uses the hardcoded `/spacecraft-software` path. Servers needing placeholders stay inert until filled in locally.
 - Templates are the **canonical superset**; the maintainer's live machine runs the three real servers only. When changing a server, update **every** host template in its dialect (and the live config too, for the three real servers).
 
 ## Tooling
 
-`bin/fill-keys.{nu,sh,ion}` substitute the four placeholder tokens (`YOUR_CONTEXT7_API_KEY`, `YOUR_BRAVE_API_KEY`, `YOUR_GITHUB_PAT`, `/path/to/your/workspace`) with values from env vars (prompting for any unset ones when interactive) and write filled copies into a **gitignored `dist/` mirror** — they never edit the tracked templates, so the no-secrets rule holds. There are three parallel ports (Nushell, POSIX/Bash/Brush, Ion) with identical behavior — **change all three together**, plus their shared host-file list (the docs and VS Code's `${input:}`/`${workspaceFolder}` fields are deliberately left out). The `.sh`/`.ion` ports shell out to `sd` (literal `-s` mode); the `.nu` port uses native string ops. These are the only executables (`755`); everything else is `644` data. Shell-specific gotchas worth knowing if you edit them: Ion's `test -t` is unreliable (use `tty -s`), Ion eats `-h`/`--help`, and Ion's `test` needs the POSIX `x`-prefix guard for `--`-leading operands.
+`bin/fill-keys.{nu,sh,ion}` substitute the three placeholder tokens (`YOUR_CONTEXT7_API_KEY`, `YOUR_BRAVE_API_KEY`, `YOUR_GITHUB_PAT`) with values from env vars (prompting for any unset ones when interactive) and write filled copies into a **gitignored `dist/` mirror** — they never edit the tracked templates, so the no-secrets rule holds. There are three parallel ports (Nushell, POSIX/Bash/Brush, Ion) with identical behavior — **change all three together**, plus their shared host-file list (the docs and VS Code's `${input:}` field is deliberately left out). The `.sh`/`.ion` ports shell out to `sd` (literal `-s` mode); the `.nu` port uses native string ops. These are the only executables (`755`); everything else is `644` data. Shell-specific gotchas worth knowing if you edit them: Ion's `test -t` is unreliable (use `tty -s`), Ion eats `-h`/`--help`, and Ion's `test` needs the POSIX `x`-prefix guard for `--`-leading operands.
 
 ## Code Architecture and Structure
 

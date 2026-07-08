@@ -30,23 +30,23 @@
 			"args": [
 				"-y",
 				"@modelcontextprotocol/server-filesystem",
-				"${workspaceFolder}"
+				"/spacecraft-software"
 			]
 		},
 		"fetch": {
 			"type": "stdio",
-			"command": "npx",
+			"command": "uvx",
 			"args": [
-				"-y",
-				"@modelcontextprotocol/server-fetch"
+				"mcp-server-fetch"
 			]
 		},
-		"memory": {
+		"engram": {
 			"type": "stdio",
-			"command": "npx",
+			"command": "engram",
 			"args": [
-				"-y",
-				"@modelcontextprotocol/server-memory"
+				"--db",
+				"/home/mj/.gemini/engram.db",
+				"mcp"
 			]
 		},
 		"brave-search": {

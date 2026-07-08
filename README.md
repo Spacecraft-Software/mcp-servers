@@ -11,8 +11,9 @@ host's own dialect. They all wire up the same nine servers:
 | **microsoft-learn** | http | `https://learn.microsoft.com/api/mcp` — Microsoft Learn docs | none |
 | **github** | http | `https://api.githubcopilot.com/mcp/` — GitHub API (repos, PRs, issues, code search) | GitHub PAT |
 | **filesystem** | stdio | `npx -y @modelcontextprotocol/server-filesystem <path>` — sandboxed file access | none (set a path) |
-| **fetch** | stdio | `npx -y @modelcontextprotocol/server-fetch` — fetch live web content | none |
-| **memory** | stdio | `npx -y @modelcontextprotocol/server-memory` — knowledge-graph memory | none |
+| **fetch** | stdio | `uvx mcp-server-fetch` — fetch live web content | none |
+| **memory** | stdio | `npx -y @modelcontextprotocol/server-memory` — knowledge-graph memory (disabled) | none |
+| **engram** | stdio | `engram --db ~/.gemini/engram.db mcp` — shared verbatim chat memory | none |
 | **brave-search** | stdio | `npx -y @modelcontextprotocol/server-brave-search` — web search | `BRAVE_API_KEY` |
 | **sequential-thinking** | stdio | `npx -y @modelcontextprotocol/server-sequential-thinking` — step-by-step reasoning | none |
 | **crates** | stdio | `crates-mcp` ([crates-mcp](https://crates.io/crates/crates-mcp) via `cargo install`) — Rust crate search and docs | none |
@@ -42,7 +43,7 @@ need a token or path filled in before they work (see Notes).
 
 - Files are **templates** with placeholders — replace these locally, never commit real
   values: `YOUR_CONTEXT7_API_KEY`, `YOUR_GITHUB_PAT`, `YOUR_BRAVE_API_KEY`, and the
-  `filesystem` server's `/path/to/your/workspace`. Until they're filled in, those servers
+  `filesystem` server's `/spacecraft-software`. Until they're filled in, those servers
   won't connect (the other servers work as-is). VS Code instead prompts for the Context7
   and Brave keys via its `inputs` mechanism, and uses built-in Copilot auth for `github`.
 - Schemas differ per host (e.g. Qwen uses `httpUrl`, Codex uses `http_headers`, Copilot
@@ -66,13 +67,12 @@ modified, so no secret is ever committed. The same tool is provided for three sh
 | `CONTEXT7_API_KEY` | `YOUR_CONTEXT7_API_KEY` | context7 |
 | `BRAVE_API_KEY` | `YOUR_BRAVE_API_KEY` | brave-search |
 | `GITHUB_PAT` | `YOUR_GITHUB_PAT` | github |
-| `WORKSPACE_PATH` | `/path/to/your/workspace` | filesystem |
+| *(hardcoded)* | `/spacecraft-software` | filesystem |
 
 ```sh
 # Provide values via env vars (any you omit are prompted for, or left as placeholders
 # when run non-interactively). Use whichever script matches your shell:
 CONTEXT7_API_KEY=ctx7sk-... BRAVE_API_KEY=... GITHUB_PAT=ghp_... \
-  WORKSPACE_PATH=/home/you/work \
   nu bin/fill-keys.nu          # or: sh bin/fill-keys.sh  /  ion bin/fill-keys.ion
 
 nu bin/fill-keys.nu --help        # options (Nushell/POSIX; Ion: see header)

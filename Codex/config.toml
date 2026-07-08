@@ -24,15 +24,15 @@ Authorization = "Bearer YOUR_GITHUB_PAT"
 
 [mcp_servers.filesystem]
 command = "npx"
-args = ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/your/workspace"]
+args = ["-y", "@modelcontextprotocol/server-filesystem", "/spacecraft-software"]
 
 [mcp_servers.fetch]
-command = "npx"
-args = ["-y", "@modelcontextprotocol/server-fetch"]
+command = "uvx"
+args = ["mcp-server-fetch"]
 
-[mcp_servers.memory]
-command = "npx"
-args = ["-y", "@modelcontextprotocol/server-memory"]
+[mcp_servers.engram]
+command = "engram"
+args = ["--db", "/home/mj/.gemini/engram.db", "mcp"]
 
 [mcp_servers.brave-search]
 command = "npx"

@@ -27,19 +27,19 @@
     "filesystem": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/your/workspace"],
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/spacecraft-software"],
       "env": {}
     },
     "fetch": {
       "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-fetch"],
+      "command": "uvx",
+      "args": ["mcp-server-fetch"],
       "env": {}
     },
-    "memory": {
+    "engram": {
       "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-memory"],
+      "command": "engram",
+      "args": ["--db", "/home/mj/.gemini/engram.db", "mcp"],
       "env": {}
     },
     "brave-search": {

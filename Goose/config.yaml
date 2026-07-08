@@ -41,16 +41,15 @@ extensions:
     args:
       - -y
       - "@modelcontextprotocol/server-filesystem"
-      - /path/to/your/workspace
+      - /spacecraft-software
     enabled: true
     timeout: 300
   fetch:
     name: fetch
     type: stdio
-    cmd: npx
+    cmd: uvx
     args:
-      - -y
-      - "@modelcontextprotocol/server-fetch"
+      - mcp-server-fetch
     enabled: true
     timeout: 300
   memory:
@@ -60,6 +59,16 @@ extensions:
     args:
       - -y
       - "@modelcontextprotocol/server-memory"
+    enabled: false
+    timeout: 300
+  engram:
+    name: engram
+    type: stdio
+    cmd: engram
+    args:
+      - --db
+      - /home/mj/.gemini/engram.db
+      - mcp
     enabled: true
     timeout: 300
   brave-search:

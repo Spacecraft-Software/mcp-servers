@@ -29,17 +29,22 @@
     },
     "filesystem": {
       "type": "local",
-      "command": ["npx", "-y", "@modelcontextprotocol/server-filesystem", "/path/to/your/workspace"],
+      "command": ["npx", "-y", "@modelcontextprotocol/server-filesystem", "/spacecraft-software"],
       "enabled": true
     },
     "fetch": {
       "type": "local",
-      "command": ["npx", "-y", "@modelcontextprotocol/server-fetch"],
+      "command": ["uvx", "mcp-server-fetch"],
       "enabled": true
     },
     "memory": {
       "type": "local",
       "command": ["npx", "-y", "@modelcontextprotocol/server-memory"],
+      "enabled": false
+    },
+    "engram": {
+      "type": "local",
+      "command": ["engram", "--db", "/home/mj/.gemini/engram.db", "mcp"],
       "enabled": true
     },
     "brave-search": {

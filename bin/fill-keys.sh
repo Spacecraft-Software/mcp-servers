@@ -13,7 +13,7 @@
 #   CONTEXT7_API_KEY  YOUR_CONTEXT7_API_KEY       context7
 #   BRAVE_API_KEY     YOUR_BRAVE_API_KEY          brave-search
 #   GITHUB_PAT        YOUR_GITHUB_PAT             github
-#   WORKSPACE_PATH    /path/to/your/workspace     filesystem
+#   (filesystem path is now hardcoded to /spacecraft-software in the templates)
 
 #
 # Requires: sd (https://github.com/chmln/sd — `cargo install sd` or `nix run nixpkgs#sd`).
@@ -27,7 +27,7 @@ Usage: fill-keys.sh [--out DIR]
   --out DIR   output directory (gitignored), relative to the repo root [default: dist]
   -h, --help  show this help
 
-Env vars: CONTEXT7_API_KEY, BRAVE_API_KEY, GITHUB_PAT, WORKSPACE_PATH
+Env vars: CONTEXT7_API_KEY, BRAVE_API_KEY, GITHUB_PAT
 EOF
 }
 
@@ -100,7 +100,6 @@ done <<'EOF'
 YOUR_CONTEXT7_API_KEY|CONTEXT7_API_KEY|1
 YOUR_BRAVE_API_KEY|BRAVE_API_KEY|1
 YOUR_GITHUB_PAT|GITHUB_PAT|1
-/path/to/your/workspace|WORKSPACE_PATH|0
 EOF
 
 written=0
@@ -131,7 +130,7 @@ Mimo/mimocode.jsonc|~/.config/mimocode/mimocode.jsonc
 Goose/config.yaml|~/.config/goose/config.yaml
 EOF
 
-printf 'Filled %s of 4 placeholders into %s/ (%s files)\n' "$filled" "$out_root" "$written"
+printf 'Filled %s of 3 placeholders into %s/ (%s files)\n' "$filled" "$out_root" "$written"
 [ -n "$filled_names" ] && printf 'Filled:%s\n' "$filled_names"
 [ -n "$skipped_names" ] && printf 'Left as placeholders (those servers stay inert):%s\n' "$skipped_names"
 printf '\nInstall destinations:\n'
