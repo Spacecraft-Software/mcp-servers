@@ -51,10 +51,11 @@ need a token or path filled in before they work (see Notes).
 
 ## Filling in your keys
 
-`bin/fill-keys.*` substitutes the placeholders with your real values and writes
-ready-to-use copies into a gitignored `dist/` mirror — the tracked templates are never
-modified, so no secret is ever committed. The same tool is provided for three shells
-(pick whichever you run); all behave identically:
+`bin/fill-keys.*` substitutes the placeholders with your real values **directly in the
+live config files** — the tracked templates are never modified, so no secret is ever
+committed. Before modifying each file, the script asks for confirmation (use `--yes` to
+auto-approve). The same tool is provided for three shells (pick whichever you run); all
+behave identically:
 
 | Script | Shell | Notes |
 |--------|-------|-------|
@@ -74,15 +75,14 @@ modified, so no secret is ever committed. The same tool is provided for three sh
 CONTEXT7_API_KEY=ctx7sk-... BRAVE_API_KEY=... PERPLEXITY_API_KEY=pplx-... \
   nu bin/fill-keys.nu          # or: sh bin/fill-keys.sh  /  ion bin/fill-keys.ion
 
-nu bin/fill-keys.nu --help        # options (Nushell/POSIX; Ion: see header)
-nu bin/fill-keys.nu --out /tmp/mcp   # write somewhere else
+nu bin/fill-keys.nu --yes        # auto-approve all files
+nu bin/fill-keys.nu --help       # options (Nushell/POSIX; Ion: see header)
 ```
 
-The script prints each filled file's intended install destination. Copy the relevant
-`dist/<Host>/…` file to that path (whole-file for most hosts; for hosts whose live
-config holds other settings — Codex, Claude Code, Grok, Kimi, OpenClaude — merge the
-MCP block in). Omitted keys keep their placeholder, so that server simply stays inert.
-VS Code is copied unchanged: it prompts for the Context7/Brave keys itself.
+Each file is presented with a `[Y/n]` prompt so you control which hosts get their keys
+filled. Omitted keys keep their placeholder, so that server simply stays inert. VS Code
+is excluded from the list — it prompts for the Context7/Brave keys via its own `inputs`
+mechanism.
 
 ## Project Posture
 

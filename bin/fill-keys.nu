@@ -2,23 +2,20 @@
 # SPDX-FileCopyrightText: 2026 Mohamed Hammad <Mohamed.Hammad@SpacecraftSoftware.org>
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# fill-keys.nu — fill the MCP config templates' placeholders with real values and
-# write ready-to-use copies into a gitignored output dir (default: dist/).
-#
-# Values are read from environment variables; any that are unset are prompted for
-# (hidden input) when run interactively, or left as placeholders when not (CI/agent).
-# The tracked templates are never modified — secrets only ever land in the output dir.
+# fill-keys.nu — fill the MCP config files' placeholder API-key tokens with
+# real values directly in their live config paths. Each file is presented with
+# a Y/N prompt before modification, so the user controls which hosts get their
+# keys filled. Supports unattended (--yes) mode for CI.
 #
 #   Env var          Fills placeholder           Server
 #   CONTEXT7_API_KEY  YOUR_CONTEXT7_API_KEY       context7
 #   BRAVE_API_KEY     YOUR_BRAVE_API_KEY          brave-search
 #   PERPLEXITY_API_KEY YOUR_PERPLEXITY_API_KEY    perplexity
-#   (filesystem path is now hardcoded to /spacecraft-software in the templates)
 
 #
 # Usage:
-#   CONTEXT7_API_KEY=ctx7sk-... BRAVE_API_KEY=... nu bin/fill-keys.nu
-#   nu bin/fill-keys.nu --out /tmp/mcp        # custom output dir
+#   CONTEXT7_API_KEY=ctx7sk-... nu bin/fill-keys.nu
+#   nu bin/fill-keys.nu --yes
 #   nu bin/fill-keys.nu --help
 
 # Each placeholder, the env var that fills it, and whether it is a secret (hidden prompt).
@@ -29,24 +26,23 @@ const TOKENS = [
     ["YOUR_PERPLEXITY_API_KEY"    "PERPLEXITY_API_KEY" true ]
 ]
 
-# Host config templates and where each filled copy is meant to be installed.
-# VS Code and the Gemini enablement file carry no placeholders — they are copied verbatim.
-const HOSTS = [
-    [src                                       live];
-    ["Antigravity/mcp_config.json"             "(Antigravity — editor-managed)"        ]
-    ["VSCode/mcp.json"                         "<workspace>/.vscode/mcp.json"          ]
-    ["GitHubCopilotCLI/mcp-config.json"        "~/.copilot/mcp-config.json"            ]
-    ["ClaudeCode/.mcp.json"                    "~/.claude.json (mcpServers)"           ]
-    ["OpenClaude/.mcp.json"                    "~/.openclaude.json (mcpServers)"       ]
-    ["Codex/config.toml"                       "~/.codex/config.toml"                  ]
-    ["Grok/config.toml"                        "~/.grok/config.toml"                   ]
-    ["Kimi/config.toml"                        "~/.kimi-code/config.toml"              ]
-    ["Gemini/settings.json"                    "~/.gemini/settings.json"               ]
-    ["Gemini/mcp-server-enablement.json"       "~/.gemini/mcp-server-enablement.json"  ]
-    ["Qwen/settings.json"                       "~/.qwen/settings.json"                 ]
-    ["OpenCode/opencode.jsonc"                 "~/.config/opencode/opencode.jsonc"     ]
-    ["Mimo/mimocode.jsonc"                     "~/.config/mimocode/mimocode.jsonc"     ]
-    ["Goose/config.yaml"                       "~/.config/goose/config.yaml"           ]
+# Base names of live configs (relative to $HOME).
+const LIVE_CONFIG_RELS = [
+    [label                          rel];
+    ["Antigravity (main)"           ".gemini/config/mcp_config.json"                ]
+    ["Antigravity (alt)"            ".gemini/antigravity/mcp_config.json"           ]
+    ["GitHub Copilot CLI"           ".copilot/mcp-config.json"                      ]
+    ["Claude Code"                  ".claude.json"                                  ]
+    ["OpenClaude"                   ".openclaude.json"                               ]
+    ["Codex CLI"                    ".codex/config.toml"                            ]
+    ["Grok"                         ".grok/config.toml"                             ]
+    ["Kimi Code"                    ".kimi-code/config.toml"                        ]
+    ["Gemini (settings)"            ".gemini/settings.json"                         ]
+    ["Gemini (enablement)"          ".gemini/mcp-server-enablement.json"            ]
+    ["Qwen Code"                    ".qwen/settings.json"                           ]
+    ["OpenCode"                     ".config/opencode/opencode.jsonc"               ]
+    ["Mimo Code"                    ".config/mimocode/mimocode.jsonc"               ]
+    ["Goose"                        ".config/goose/config.yaml"                     ]
 ]
 
 # Read an env var, returning null when unset or empty.
@@ -67,7 +63,6 @@ def resolve-tokens [interactive: bool]: nothing -> table {
                     input $"($t.env_var) [blank to skip]: "
                 }
             )
-            # `input --suppress-output` leaves the cursor on the prompt line.
             if $t.secret { print "" }
             $value = (if ($entered | is-empty) { null } else { $entered })
         }
@@ -75,13 +70,21 @@ def resolve-tokens [interactive: bool]: nothing -> table {
     }
 }
 
-# Fill placeholders in the templates and write copies under `out`.
+# Prompt for Y/N on the terminal; returns true for Yes (default).
+def prompt-yn [label: string]: nothing -> bool {
+    let answer = (input $"($label) [Y/n]: ")
+    ($answer | str trim | is-empty) or ($answer | str downcase | str starts-with "y")
+}
+
 def main [
-    --out: string = "dist"   # output directory (gitignored), relative to the repo root
+    --yes (-y)   # skip all Y/N prompts (auto-yes) for unattended/CI use
 ] {
-    let repo = ($env.FILE_PWD | path dirname)
+    let home = ($env.HOME)
+    let live_configs = ($LIVE_CONFIG_RELS | each {|c| {label: $c.label, path: ($home | path join $c.rel)} })
+
     let interactive = (
-        (is-terminal --stdin)
+        not $yes
+        and (is-terminal --stdin)
         and ((env-value "CI") == null)
         and ((env-value "CLAUDECODE") == null)
     )
@@ -89,35 +92,33 @@ def main [
     let tokens = (resolve-tokens $interactive)
     let active = ($tokens | where filled)
 
-    let out_root = if ($out | path type) == "dir" or ($out | str starts-with "/") {
-        $out
-    } else {
-        $repo | path join $out
+    # If no tokens were filled at all, nothing to do.
+    if ($active | length) == 0 {
+        print "No keys to fill — all env vars are unset."
+        return
     }
 
-    for h in $HOSTS {
-        let src = ($repo | path join $h.src)
-        if not ($src | path exists) {
-            print --stderr $"error: missing template ($h.src)"
-            exit 1
+    mut processed = 0
+    mut skipped = 0
+
+    for c in $live_configs {
+        if not ($c.path | path exists) {
+            print --stderr $"warning: ($c.label) not found at ($c.path) — skipping"
+            continue
         }
-        let dst = ($out_root | path join $h.src)
-        mkdir ($dst | path dirname)
-        mut content = (open --raw $src)
+        if $interactive and not (prompt-yn $"Fill keys in ($c.label) ($c.path)?") {
+            $skipped += 1
+            continue
+        }
+        mut content = (open --raw $c.path)
         for t in $active {
             $content = ($content | str replace --all $t.placeholder $t.value)
         }
-        $content | save --force $dst
+        $content | save --force $c.path
+        $processed += 1
     }
 
-    # Summary to stdout.
-    print $"Filled ($active | length) of ($tokens | length) placeholders → ($out_root)/"
+    print $"Filled ($active | length) of ($tokens | length) placeholders in ($processed) files"
+    if $skipped > 0 { print $"  ($skipped) files declined" }
     print ($tokens | select placeholder filled)
-    let skipped = ($tokens | where not filled | get placeholder)
-    if ($skipped | is-not-empty) {
-        print $"Left as placeholders — those servers stay inert: ($skipped | str join ', ')"
-    }
-    print ""
-    print "Install destinations:"
-    print ($HOSTS | select src live)
 }

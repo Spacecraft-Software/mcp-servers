@@ -4,66 +4,42 @@
 #
 # fill-keys.ion — Ion (Redox) port of fill-keys.nu.
 #
-# Fills the MCP config templates' placeholders with real values and writes ready-to-use
-# copies into a gitignored output dir (default: dist/). Values come from env vars; any
-# unset ones are prompted for (hidden input) when interactive, or left as placeholders
-# when not (CI/agent). The tracked templates are never modified.
+# Fills the MCP config files' placeholder API-key tokens with real values
+# directly in their live config paths. Each file is presented with a Y/N
+# prompt before modification, so the user controls which hosts get their
+# keys filled. Supports unattended (--yes) mode for CI.
 #
 #   Env var          Fills placeholder           Server
 #   CONTEXT7_API_KEY  YOUR_CONTEXT7_API_KEY       context7
 #   BRAVE_API_KEY     YOUR_BRAVE_API_KEY          brave-search
 #   PERPLEXITY_API_KEY YOUR_PERPLEXITY_API_KEY    perplexity
-#   (filesystem path is now hardcoded to /spacecraft-software in the templates)
 
 #
 # Requires: sd (cargo install sd / nix run nixpkgs#sd).
 #
-# Note: `test "x$v" = "x..."` uses the POSIX x-prefix guard — Ion's `test` treats a bare
-# leading `--word` operand as an option flag, so comparands must not start with `-`.
+# Note: Ion eats -h/--help; ION_HIDE_INTERNAL=0 and running `ion help <script>`
+#       may show limited help. The --help branch below is best-effort.
 
 fn usage
-    echo "Usage: fill-keys.ion [--out DIR]"
+    echo "Usage: fill-keys.ion [--yes]"
     echo ""
-    echo "  --out DIR   output directory (gitignored), relative to the repo root [default: dist]"
+    echo "  --yes       skip all Y/N prompts (auto-yes), for unattended/CI use"
     echo "  -h, --help  show this help"
     echo ""
     echo "Env vars: CONTEXT7_API_KEY, BRAVE_API_KEY, PERPLEXITY_API_KEY"
 end
 
-# Hidden/plain prompt on the controlling terminal; echoes the typed value to stdout.
-fn promptval label:str secret:str
-    if test "x$secret" = "x1"
-        let old = $(stty -g < /dev/tty)
-        stty -echo < /dev/tty
-        printf '%s' $label > /dev/tty
-        let reply = $(head -n 1 < /dev/tty)
-        stty $old < /dev/tty
-        printf '\n' > /dev/tty
-        echo $reply
-    else
-        printf '%s' $label > /dev/tty
-        let reply = $(head -n 1 < /dev/tty)
-        echo $reply
-    end
-end
-
 # --- argument parsing ---
-# @args[0] is the script path; Ion only lets us read the args array whole (@args),
-# so capture the first element in the loop. (Ion eats -h/--help as its own flags, so
-# the --help branch below is best-effort; see the header comment for usage.)
-let out = "dist"
-let want_out = 0
+let yes_all = 0
+let want_yes = 0
 let idx = 0
 let script = ""
 for a in @args
     if test "x$idx" = "x0"
         let script = $a
         let idx = 1
-    else if test "x$want_out" = "x1"
-        let out = $a
-        let want_out = 0
-    else if test "x$a" = "x--out"
-        let want_out = 1
+    else if test "x$a" = "x--yes"
+        let yes_all = 1
     else if test "x$a" = "x--help"
         usage
         exit 0
@@ -83,25 +59,49 @@ if test "x$have_sd" = "x0"
     exit 1
 end
 
-# --- paths ---
-let sdir = $(dirname $script)
-let repo = $(cd $sdir/.. && pwd)
-let first = $(printf '%s' $out | head -c 1)
-let out_root = "$repo/$out"
-if test "x$first" = "x/"
-    let out_root = $out
-end
-
 # --- interactive detection (tty -s is reliable in Ion; test -t is not) ---
 let interactive = 0
-if tty -s
-    let interactive = 1
+if test "x$yes_all" = "x0"
+    if tty -s
+        let interactive = 1
+    end
+    if exists -s CI
+        let interactive = 0
+    end
+    if exists -s CLAUDECODE
+        let interactive = 0
+    end
 end
-if exists -s CI
-    let interactive = 0
+
+# --- prompt helpers ---
+fn prompt_yn label:str
+    while true
+        printf '%s' $label > /dev/tty
+        let ans = $(head -n 1 < /dev/tty)
+        if test "x$ans" = "xy" || test "x$ans" = "xY" || test "x$ans" = "x"
+            return 0
+        end
+        if test "x$ans" = "xn" || test "x$ans" = "xN"
+            return 1
+        end
+        printf '  Please answer y or n.\n' > /dev/tty
+    end
 end
-if exists -s CLAUDECODE
-    let interactive = 0
+
+fn prompt_val label:str secret:str
+    if test "x$secret" = "x1"
+        let old = $(stty -g < /dev/tty)
+        stty -echo < /dev/tty
+        printf '%s' $label > /dev/tty
+        let reply = $(head -n 1 < /dev/tty)
+        stty $old < /dev/tty
+        printf '\n' > /dev/tty
+        echo $reply
+    else
+        printf '%s' $label > /dev/tty
+        let reply = $(head -n 1 < /dev/tty)
+        echo $reply
+    end
 end
 
 # --- resolve each token: env var, else prompt, else empty ---
@@ -110,7 +110,7 @@ if exists -s CONTEXT7_API_KEY
     let v_ctx = $CONTEXT7_API_KEY
 end
 if test -z "$v_ctx" && test "x$interactive" = "x1"
-    let v_ctx = $(promptval "CONTEXT7_API_KEY [blank to skip]: " "1")
+    let v_ctx = $(prompt_val "CONTEXT7_API_KEY [blank to skip]: " "1")
 end
 
 let v_brave = ""
@@ -118,7 +118,7 @@ if exists -s BRAVE_API_KEY
     let v_brave = $BRAVE_API_KEY
 end
 if test -z "$v_brave" && test "x$interactive" = "x1"
-    let v_brave = $(promptval "BRAVE_API_KEY [blank to skip]: " "1")
+    let v_brave = $(prompt_val "BRAVE_API_KEY [blank to skip]: " "1")
 end
 
 let v_perp = ""
@@ -126,68 +126,77 @@ if exists -s PERPLEXITY_API_KEY
     let v_perp = $PERPLEXITY_API_KEY
 end
 if test -z "$v_perp" && test "x$interactive" = "x1"
-    let v_perp = $(promptval "PERPLEXITY_API_KEY [blank to skip]: " "1")
+    let v_perp = $(prompt_val "PERPLEXITY_API_KEY [blank to skip]: " "1")
 end
 
 let filled = 0
 let filled_names = ""
-let skipped_names = ""
 if test -n "$v_ctx"
     let filled += 1
     let filled_names ++= " CONTEXT7_API_KEY"
-else
-    let skipped_names ++= " CONTEXT7_API_KEY"
 end
 if test -n "$v_brave"
     let filled += 1
     let filled_names ++= " BRAVE_API_KEY"
-else
-    let skipped_names ++= " BRAVE_API_KEY"
 end
 if test -n "$v_perp"
     let filled += 1
     let filled_names ++= " PERPLEXITY_API_KEY"
-else
-    let skipped_names ++= " PERPLEXITY_API_KEY"
 end
 
-# --- write filled copies ---
-let written = 0
-for src in [ "Antigravity/mcp_config.json" "VSCode/mcp.json" "GitHubCopilotCLI/mcp-config.json" "ClaudeCode/.mcp.json" "OpenClaude/.mcp.json" "Codex/config.toml" "Grok/config.toml" "Kimi/config.toml" "Gemini/settings.json" "Gemini/mcp-server-enablement.json" "Qwen/settings.json" "OpenCode/opencode.jsonc" "Mimo/mimocode.jsonc" "Goose/config.yaml" ]
-    let from = "$repo/$src"
-    let have = 0
-    if exists -f $from
-        let have = 1
+# --- live config processing ---
+let processed = 0
+let skipped_files = 0
+
+# Relative paths under $HOME for each host (label|relpath)
+for entry in [ \
+    "Antigravity (main)|.gemini/config/mcp_config.json" \
+    "Antigravity (alt)|.gemini/antigravity/mcp_config.json" \
+    "GitHub Copilot CLI|.copilot/mcp-config.json" \
+    "Claude Code|.claude.json" \
+    "OpenClaude|.openclaude.json" \
+    "Codex CLI|.codex/config.toml" \
+    "Grok|.grok/config.toml" \
+    "Kimi Code|.kimi-code/config.toml" \
+    "Gemini (settings)|.gemini/settings.json" \
+    "Gemini (enablement)|.gemini/mcp-server-enablement.json" \
+    "Qwen Code|.qwen/settings.json" \
+    "OpenCode|.config/opencode/opencode.jsonc" \
+    "Mimo Code|.config/mimocode/mimocode.jsonc" \
+    "Goose|.config/goose/config.yaml" \
+]
+    let parts = $(echo $entry | sd '|' '\n')
+    let label = $(echo $parts | head -n 1)
+    let rel = $(echo $parts | tail -n +2)
+    let path = "$HOME/$rel"
+    if not test -f "$path"
+        printf 'warning: %s not found at %s — skipping\n' $label $path > /dev/stderr
+        continue
     end
-    if test "x$have" = "x0"
-        printf 'error: missing template %s\n' $src > /dev/stderr
-        exit 1
+    if test "x$interactive" = "x1"
+        prompt_yn "Fill keys in $label ($path)? [Y/n] "
+        if test "x$?" = "x1"
+            let skipped_files += 1
+            continue
+        end
     end
-    let dst = "$out_root/$src"
-    mkdir -p $(dirname $dst)
-    cp $from $dst
     if test -n "$v_ctx"
-        sd -s "YOUR_CONTEXT7_API_KEY" $v_ctx $dst
+        sd -s "YOUR_CONTEXT7_API_KEY" $v_ctx $path
     end
     if test -n "$v_brave"
-        sd -s "YOUR_BRAVE_API_KEY" $v_brave $dst
+        sd -s "YOUR_BRAVE_API_KEY" $v_brave $path
     end
     if test -n "$v_perp"
-        sd -s "YOUR_PERPLEXITY_API_KEY" $v_perp $dst
+        sd -s "YOUR_PERPLEXITY_API_KEY" $v_perp $path
     end
-    let written += 1
+    let processed += 1
 end
 
-# --- summary ---
-printf 'Filled %s of 3 placeholders into %s/ (%s files)\n' $filled $out_root $written
+printf 'Filled %s of 3 placeholders in %s files' $filled $processed
+if test "x$skipped_files" != "x0"
+    printf ' (%s declined)' $skipped_files
+end
+printf '\n'
 if test -n "$filled_names"
     printf 'Filled:%s\n' $filled_names
-end
-if test -n "$skipped_names"
-    printf 'Left as placeholders, those servers stay inert:%s\n' $skipped_names
-end
-echo ""
-echo "Install destinations:"
-for line in [ "Antigravity/mcp_config.json -> Antigravity, editor-managed" "VSCode/mcp.json -> <workspace>/.vscode/mcp.json" "GitHubCopilotCLI/mcp-config.json -> ~/.copilot/mcp-config.json" "ClaudeCode/.mcp.json -> ~/.claude.json mcpServers" "OpenClaude/.mcp.json -> ~/.openclaude.json mcpServers" "Codex/config.toml -> ~/.codex/config.toml" "Grok/config.toml -> ~/.grok/config.toml" "Kimi/config.toml -> ~/.kimi-code/config.toml" "Gemini/settings.json -> ~/.gemini/settings.json" "Gemini/mcp-server-enablement.json -> ~/.gemini/mcp-server-enablement.json" "Qwen/settings.json -> ~/.qwen/settings.json" "OpenCode/opencode.jsonc -> ~/.config/opencode/opencode.jsonc" "Mimo/mimocode.jsonc -> ~/.config/mimocode/mimocode.jsonc" "Goose/config.yaml -> ~/.config/goose/config.yaml" ]
-    echo "  $line"
 end

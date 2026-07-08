@@ -145,7 +145,7 @@ Every host template declares all ten. Two groups:
 
 ## Tooling
 
-`bin/fill-keys.{nu,sh,ion}` substitute the three placeholder tokens (`YOUR_CONTEXT7_API_KEY`, `YOUR_BRAVE_API_KEY`, `YOUR_PERPLEXITY_API_KEY`) with values from env vars (prompting for any unset ones when interactive) and write filled copies into a **gitignored `dist/` mirror** — they never edit the tracked templates, so the no-secrets rule holds. There are three parallel ports (Nushell, POSIX/Bash/Brush, Ion) with identical behavior — **change all three together**, plus their shared host-file list (the docs and VS Code's `${input:}` field is deliberately left out). The `.sh`/`.ion` ports shell out to `sd` (literal `-s` mode); the `.nu` port uses native string ops. These are the only executables (`755`); everything else is `644` data. Shell-specific gotchas worth knowing if you edit them: Ion's `test -t` is unreliable (use `tty -s`), Ion eats `-h`/`--help`, and Ion's `test` needs the POSIX `x`-prefix guard for `--`-leading operands.
+`bin/fill-keys.{nu,sh,ion}` substitute the three placeholder tokens (`YOUR_CONTEXT7_API_KEY`, `YOUR_BRAVE_API_KEY`, `YOUR_PERPLEXITY_API_KEY`) with values from env vars and write them **directly into the live config files** — they never touch the tracked templates, so the no-secrets rule holds. Before modifying each file, the script presents a Y/N prompt (skippable with `--yes`). The `.sh`/`.ion` ports shell out to `sd` (literal `-s` mode); the `.nu` port uses native string ops. There are three parallel ports (Nushell, POSIX/Bash/Brush, Ion) with identical behavior — **change all three together** (their live-config path lists must stay in sync). Shell-specific gotchas worth knowing if you edit them: Ion's `test -t` is unreliable (use `tty -s`), Ion eats `-h`/`--help`, and Ion's `test` needs the POSIX `x`-prefix guard for `--`-leading operands.
 
 ## Code Architecture and Structure
 
@@ -168,7 +168,7 @@ The repository follows a **multi-host template pattern** where:
 2. **Key Filling Scripts** (`bin/fill-keys.*`):
    - Three parallel implementations for different shells
    - Substitute placeholders with real values from environment variables
-   - Write filled configs to gitignored `dist/` directory
+   - Fill directly into live config files with per-file Y/N confirmation
    - Never modify tracked templates
 
 3. **Validation System** (`.github/validate-configs.py`):
@@ -184,11 +184,11 @@ The repository follows a **multi-host template pattern** where:
 ### Data Flow
 
 ```
-Template Files (tracked) 
-  ↓ (fill-keys scripts with env vars)
-Filled Configs (dist/, gitignored)
-  ↓ (manual copy to live locations)
-Host Applications (local config paths)
+Template Files (tracked)  →  reference for what each host config should look like
+                                ↓
+Live Config Files (untracked, ~/.gemini/, ~/.config/opencode/, etc.)
+  ↓ (fill-keys scripts with env vars + Y/N confirmation per file)
+Placeholders replaced in-place — keys never land in the repo
 ```
 
 ### Important Constraints
@@ -205,7 +205,7 @@ Host Applications (local config paths)
 
 1. **Make changes**: Edit config templates or add new host support
 2. **Validate**: Run `python3 .github/validate-configs.py`
-3. **Test fill**: Run `sh bin/fill-keys.sh` with test values
+3. **Fill keys**: Run `sh bin/fill-keys.sh --yes` with env vars set
 4. **Check REUSE**: Run `reuse lint`
 5. **Commit**: Use signed commits with conventional commit messages
 6. **Push**: CI will validate on GitHub
@@ -221,7 +221,7 @@ mkdir -p NewHost
 
 # 3. Add to fill-keys scripts
 # Edit bin/fill-keys.sh, bin/fill-keys.nu, bin/fill-keys.ion
-# Add line: "NewHost/config.ext|~/.newhost/config.ext"
+# Add entry in the live-config list: label and path under $HOME
 
 # 4. Update documentation
 # Edit README.md (supported hosts table)

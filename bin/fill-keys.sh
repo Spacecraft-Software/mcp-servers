@@ -4,16 +4,15 @@
 #
 # fill-keys.sh — POSIX (Bash / Brush / dash / ash) port of fill-keys.nu.
 #
-# Fills the MCP config templates' placeholders with real values and writes ready-to-use
-# copies into a gitignored output dir (default: dist/). Values come from env vars; any
-# unset ones are prompted for (hidden input) when interactive, or left as placeholders
-# when not (CI/agent). The tracked templates are never modified.
+# Fills the MCP config files' placeholder API-key tokens with real values
+# directly in their live config paths. Each file is presented with a Y/N
+# prompt before modification, so the user controls which hosts get their
+# keys filled. Supports unattended (--yes) mode for CI.
 #
 #   Env var          Fills placeholder           Server
 #   CONTEXT7_API_KEY  YOUR_CONTEXT7_API_KEY       context7
 #   BRAVE_API_KEY     YOUR_BRAVE_API_KEY          brave-search
 #   PERPLEXITY_API_KEY YOUR_PERPLEXITY_API_KEY    perplexity
-#   (filesystem path is now hardcoded to /spacecraft-software in the templates)
 
 #
 # Requires: sd (https://github.com/chmln/sd — `cargo install sd` or `nix run nixpkgs#sd`).
@@ -22,20 +21,19 @@ set -eu
 
 usage() {
 	cat <<'EOF'
-Usage: fill-keys.sh [--out DIR]
+Usage: fill-keys.sh [--yes]
 
-  --out DIR   output directory (gitignored), relative to the repo root [default: dist]
+  --yes       skip all Y/N prompts (auto-yes), for unattended/CI use
   -h, --help  show this help
 
 Env vars: CONTEXT7_API_KEY, BRAVE_API_KEY, PERPLEXITY_API_KEY
 EOF
 }
 
-out="dist"
+yes_all=0
 while [ $# -gt 0 ]; do
 	case "$1" in
-		--out) out=${2:?--out needs a value}; shift 2 ;;
-		--out=*) out=${1#--out=}; shift ;;
+		--yes) yes_all=1; shift ;;
 		-h|--help) usage; exit 0 ;;
 		*) printf 'error: unknown argument: %s\n' "$1" >&2; usage >&2; exit 2 ;;
 	esac
@@ -46,20 +44,26 @@ command -v sd >/dev/null 2>&1 || {
 	exit 1
 }
 
-script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-repo=$(dirname -- "$script_dir")
-case "$out" in
-	/*) out_root=$out ;;
-	*)  out_root=$repo/$out ;;
-esac
-
 interactive=0
-if [ -t 0 ] && [ -z "${CI:-}" ] && [ -z "${CLAUDECODE:-}" ]; then
+if [ "$yes_all" = 0 ] && [ -t 0 ] && [ -z "${CI:-}" ] && [ -z "${CLAUDECODE:-}" ]; then
 	interactive=1
 fi
 
-# Prompt helpers read from and write to the terminal directly, so the token/host
-# here-docs below (which occupy stdin) don't swallow the typed answer.
+# Prompt helper — reads from /dev/tty so the pipe-based file list below
+# does not steal stdin.
+prompt_yn() { # $1 = label
+	[ -e /dev/tty ] || return 0
+	while :; do
+		printf '%s' "$1" >/dev/tty
+		IFS= read -r _ans </dev/tty || _ans=
+		case "$_ans" in
+			[Yy]|'') return 0 ;;
+			[Nn])    return 1 ;;
+			*)       printf '  Please answer y or n.\n' >/dev/tty ;;
+		esac
+	done
+}
+
 read_value() { # $1 = prompt, $2 = 1 for hidden
 	[ -e /dev/tty ] || return 1
 	if [ "$2" = 1 ]; then
@@ -75,13 +79,12 @@ read_value() { # $1 = prompt, $2 = 1 for hidden
 	printf '%s' "$_val"
 }
 
+tab=$(printf '\t')
 resolved=$(mktemp)
 trap 'rm -f "$resolved"' EXIT INT TERM
 
 filled=0
 filled_names=
-skipped_names=
-tab=$(printf '\t')
 
 while IFS='|' read -r placeholder envvar secret; do
 	[ -n "$placeholder" ] || continue
@@ -93,8 +96,6 @@ while IFS='|' read -r placeholder envvar secret; do
 		printf '%s%s%s\n' "$placeholder" "$tab" "$value" >>"$resolved"
 		filled=$((filled + 1))
 		filled_names="$filled_names $envvar"
-	else
-		skipped_names="$skipped_names $envvar"
 	fi
 done <<'EOF'
 YOUR_CONTEXT7_API_KEY|CONTEXT7_API_KEY|1
@@ -102,54 +103,39 @@ YOUR_BRAVE_API_KEY|BRAVE_API_KEY|1
 YOUR_PERPLEXITY_API_KEY|PERPLEXITY_API_KEY|1
 EOF
 
-written=0
-while IFS='|' read -r src live; do
-	[ -n "$src" ] || continue
-	[ -f "$repo/$src" ] || { printf 'error: missing template %s\n' "$src" >&2; exit 1; }
-	dst=$out_root/$src
-	mkdir -p "$(dirname -- "$dst")"
-	cp -- "$repo/$src" "$dst"
+# Live config paths: label|path
+processed=0
+skipped_files=0
+
+while IFS='|' read -r label path; do
+	[ -n "$label" ] || continue
+	eval "path=$path"
+	[ -f "$path" ] || { printf 'warning: %s not found at %s — skipping\n' "$label" "$path" >&2; continue; }
+	if [ "$interactive" = 1 ]; then
+		prompt_yn "Fill keys in $label ($path)? [Y/n] " || { skipped_files=$((skipped_files + 1)); continue; }
+	fi
 	while IFS="$tab" read -r ph val; do
-		sd -s "$ph" "$val" "$dst"
+		sd -s "$ph" "$val" "$path"
 	done <"$resolved"
-	written=$((written + 1))
+	processed=$((processed + 1))
 done <<'EOF'
-Antigravity/mcp_config.json|(Antigravity — editor-managed)
-VSCode/mcp.json|<workspace>/.vscode/mcp.json
-GitHubCopilotCLI/mcp-config.json|~/.copilot/mcp-config.json
-ClaudeCode/.mcp.json|~/.claude.json (mcpServers)
-OpenClaude/.mcp.json|~/.openclaude.json (mcpServers)
-Codex/config.toml|~/.codex/config.toml
-Grok/config.toml|~/.grok/config.toml
-Kimi/config.toml|~/.kimi-code/config.toml
-Gemini/settings.json|~/.gemini/settings.json
-Gemini/mcp-server-enablement.json|~/.gemini/mcp-server-enablement.json
-Qwen/settings.json|~/.qwen/settings.json
-OpenCode/opencode.jsonc|~/.config/opencode/opencode.jsonc
-Mimo/mimocode.jsonc|~/.config/mimocode/mimocode.jsonc
-Goose/config.yaml|~/.config/goose/config.yaml
+Antigravity (main)|${HOME}/.gemini/config/mcp_config.json
+Antigravity (alt)|${HOME}/.gemini/antigravity/mcp_config.json
+GitHub Copilot CLI|${HOME}/.copilot/mcp-config.json
+Claude Code|${HOME}/.claude.json
+OpenClaude|${HOME}/.openclaude.json
+Codex CLI|${HOME}/.codex/config.toml
+Grok|${HOME}/.grok/config.toml
+Kimi Code|${HOME}/.kimi-code/config.toml
+Gemini (settings)|${HOME}/.gemini/settings.json
+Gemini (enablement)|${HOME}/.gemini/mcp-server-enablement.json
+Qwen Code|${HOME}/.qwen/settings.json
+OpenCode|${HOME}/.config/opencode/opencode.jsonc
+Mimo Code|${HOME}/.config/mimocode/mimocode.jsonc
+Goose|${HOME}/.config/goose/config.yaml
 EOF
 
-printf 'Filled %s of 3 placeholders into %s/ (%s files)\n' "$filled" "$out_root" "$written"
+printf 'Filled %s of 3 placeholders in %s files' "$filled" "$processed"
+[ "$skipped_files" -gt 0 ] && printf ' (%s declined)' "$skipped_files"
+printf '\n'
 [ -n "$filled_names" ] && printf 'Filled:%s\n' "$filled_names"
-[ -n "$skipped_names" ] && printf 'Left as placeholders (those servers stay inert):%s\n' "$skipped_names"
-printf '\nInstall destinations:\n'
-while IFS='|' read -r src live; do
-	[ -n "$src" ] || continue
-	printf '  %-34s -> %s\n' "$src" "$live"
-done <<'EOF'
-Antigravity/mcp_config.json|(Antigravity — editor-managed)
-VSCode/mcp.json|<workspace>/.vscode/mcp.json
-GitHubCopilotCLI/mcp-config.json|~/.copilot/mcp-config.json
-ClaudeCode/.mcp.json|~/.claude.json (mcpServers)
-OpenClaude/.mcp.json|~/.openclaude.json (mcpServers)
-Codex/config.toml|~/.codex/config.toml
-Grok/config.toml|~/.grok/config.toml
-Kimi/config.toml|~/.kimi-code/config.toml
-Gemini/settings.json|~/.gemini/settings.json
-Gemini/mcp-server-enablement.json|~/.gemini/mcp-server-enablement.json
-Qwen/settings.json|~/.qwen/settings.json
-OpenCode/opencode.jsonc|~/.config/opencode/opencode.jsonc
-Mimo/mimocode.jsonc|~/.config/mimocode/mimocode.jsonc
-Goose/config.yaml|~/.config/goose/config.yaml
-EOF
