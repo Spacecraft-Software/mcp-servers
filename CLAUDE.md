@@ -28,31 +28,43 @@ The only meaningful validation is that each config is well-formed JSON/TOML/YAML
 
 ### Key Filling and Deployment
 
-- **Fill placeholders**: Use the fill-keys scripts to substitute API key placeholders with real values:
-  ```bash
-  # POSIX/Bash/Brush
-  CONTEXT7_API_KEY=your_key BRAVE_API_KEY=your_key \
-    sh bin/fill-keys.sh
-  
-  # Nushell
-  $env:CONTEXT7_API_KEY="your_key" $env:BRAVE_API_KEY="your_key" \
-    nu bin/fill-keys.nu
-  
-  # Ion
-  CONTEXT7_API_KEY=your_key BRAVE_API_KEY=your_key \
-    ion bin/fill-keys.ion
-  ```
-  Filled configs are written to `dist/` directory (gitignored).
+The fill-keys scripts substitute the three placeholder tokens
+(`YOUR_CONTEXT7_API_KEY`, `YOUR_BRAVE_API_KEY`, `YOUR_PERPLEXITY_API_KEY`) with real
+values **directly in the live config files** under `$HOME`. They never write to `dist/`,
+never take an output path, and never touch the tracked templates — which is what keeps the
+no-secrets rule intact. Requires [`sd`](https://github.com/chmln/sd)
+(`cargo install sd`, or `nix run nixpkgs#sd`).
 
-- **Interactive mode**: Run without env vars to be prompted for missing values:
+- **Interactive (the normal path)**: run with no arguments. Missing keys are prompted for
+  with echo off (blank input skips that key), then each live config gets its own
+  `Fill keys in <label> (<path>)? [Y/n]` prompt, so you choose which hosts are touched:
   ```bash
-  sh bin/fill-keys.sh
+  sh bin/fill-keys.sh          # POSIX / Bash / Brush / dash / ash
+  nu bin/fill-keys.nu          # Nushell
+  ion bin/fill-keys.ion        # Ion
   ```
 
-- **Custom output directory**: Use `--out` flag to write to a different location:
+- **Keys from the environment**: any key already exported is used without a prompt; the
+  per-file Y/N prompts still apply.
   ```bash
-  sh bin/fill-keys.sh --out /custom/path
+  # POSIX / Bash / Brush — also the right way to launch the nu and ion ports
+  CONTEXT7_API_KEY=… BRAVE_API_KEY=… PERPLEXITY_API_KEY=… sh bin/fill-keys.sh
+
+  # from inside Nushell
+  $env.CONTEXT7_API_KEY = "…"; nu bin/fill-keys.nu
   ```
+
+- **Unattended / CI**: `--yes` skips every Y/N prompt. Prompting also switches itself off
+  whenever stdin is not a TTY or `CI` / `CLAUDECODE` is set, so an agent-driven run never
+  blocks on a prompt — supply the keys as env vars in that case.
+  ```bash
+  sh bin/fill-keys.sh --yes
+  ```
+
+The only flags are `--yes` and `-h`/`--help` (the Nushell port also accepts `-y`). Ion eats
+`-h`/`--help`, so its usage text is best-effort (see the note in `bin/fill-keys.ion`). The
+live-config path list lives in all three scripts and must stay in sync across them — see
+[Tooling](#tooling).
 
 ### Adding or Modifying Servers
 
