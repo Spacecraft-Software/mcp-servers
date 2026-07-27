@@ -75,9 +75,29 @@
 				"PERPLEXITY_API_KEY": "${input:PERPLEXITY_API_KEY}"
 			}
 		},
+		"terminal": {
+			"type": "stdio",
+			"command": "npx",
+			"args": [
+				"-y",
+				"mcp-server-terminal"
+			],
+			"env": {
+				"RUST_LOG": "error",
+				"NO_COLOR": "1",
+				"TERM": "dumb"
+			}
+		},
 		"crates": {
 			"type": "stdio",
 			"command": "crates-mcp"
+		},
+		"bravais-cli": {
+			"type": "stdio",
+			"command": "bravais-cli",
+			"args": [
+				"mcp"
+			]
 		}
 	},
 	"inputs": [

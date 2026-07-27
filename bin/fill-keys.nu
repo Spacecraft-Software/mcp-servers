@@ -36,7 +36,7 @@ const LIVE_CONFIG_RELS = [
     ["OpenClaude"                   ".openclaude.json"                               ]
     ["Codex CLI"                    ".codex/config.toml"                            ]
     ["Grok"                         ".grok/config.toml"                             ]
-    ["Kimi Code"                    ".kimi-code/config.toml"                        ]
+    ["Kimi Code"                    ".kimi-code/mcp.json"                           ]
     ["Gemini (settings)"            ".gemini/settings.json"                         ]
     ["Gemini (enablement)"          ".gemini/mcp-server-enablement.json"            ]
     ["Qwen Code"                    ".qwen/settings.json"                           ]

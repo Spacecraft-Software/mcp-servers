@@ -2,13 +2,14 @@
 
 Per-tool **MCP (Model Context Protocol) server configurations** for the coding agents
 and editors I use. Each directory holds the MCP config fragment for one host, in that
-host's own dialect. They all wire up the same ten servers:
+host's own dialect. They all wire up the same twelve servers:
 
 | Server | Transport | Endpoint / command | Auth |
 |--------|-----------|--------------------|------|
 | **nixos** | stdio | `nix run github:utensils/mcp-nixos --` ([mcp-nixos](https://github.com/utensils/mcp-nixos)) — nixpkgs / NixOS options | none |
 | **context7** | http | `https://mcp.context7.com/mcp` — Upstash Context7 library docs | `CONTEXT7_API_KEY` |
 | **microsoft-learn** | http | `https://learn.microsoft.com/api/mcp` — Microsoft Learn docs | none |
+| **bravais-cli** | stdio | `bravais-cli mcp` — Bravais OS command replacement and shell translator | none |
 | **filesystem** | stdio | `npx -y @modelcontextprotocol/server-filesystem <path>` — sandboxed file access | none (set a path) |
 | **fetch** | stdio | `uvx mcp-server-fetch` — fetch live web content | none |
 | **engram** | stdio | `engram --db ~/.gemini/engram.db mcp` — shared verbatim chat memory | none |
@@ -16,6 +17,7 @@ host's own dialect. They all wire up the same ten servers:
 | **perplexity** | stdio | `npx -y perplexity-mcp` — Perplexity search | `PERPLEXITY_API_KEY` |
 | **sequential-thinking** | stdio | `npx -y @modelcontextprotocol/server-sequential-thinking` — step-by-step reasoning | none |
 | **crates** | stdio | `crates-mcp` ([crates-mcp](https://crates.io/crates/crates-mcp) via `cargo install`) — Rust crate search and docs | none |
+| **terminal** | stdio | `npx -y mcp-server-terminal` ([mcp-server-terminal](https://github.com/aybelatchane/mcp-server-terminal)) — TUI/CLI terminal automation | none |
 
 The `npx`-based servers need Node.js 18+. `brave-search`, `perplexity`, and `filesystem`
 need a token or path filled in before they work (see Notes).
@@ -27,11 +29,11 @@ need a token or path filled in before they work (see Notes).
 | `Antigravity/` | Antigravity | `~/.gemini/config/mcp_config.json` (CLI)<br>`~/.gemini/antigravity/mcp_config.json` (2.0)<br>`~/.gemini/antigravity-ide/mcp_config.json` (IDE) |
 | `VSCode/` | VS Code | `.vscode/mcp.json` |
 | `GitHubCopilotCLI/` | GitHub Copilot CLI | `~/.copilot/mcp-config.json` |
-| `ClaudeCode/` | Claude Code | `~/.claude.json` |
+| `ClaudeCode/` | Claude Code | `~/.claude.json` (+ `~/.claude/settings.json`) |
 | `OpenClaude/` | OpenClaude | `~/.openclaude.json` |
 | `Codex/` | OpenAI Codex | `~/.codex/config.toml` |
 | `Grok/` | Grok CLI | `~/.grok/config.toml` |
-| `Kimi/` | Kimi Code CLI | `~/.kimi-code/config.toml` |
+| `Kimi/` | Kimi Code CLI | `~/.kimi-code/mcp.json` |
 | `Gemini/` | Gemini CLI | `~/.gemini/settings.json` |
 | `Qwen/` | Qwen Code | `~/.qwen/settings.json` |
 | `OpenCode/` | opencode | `~/.config/opencode/opencode.jsonc` |
@@ -48,6 +50,9 @@ need a token or path filled in before they work (see Notes).
   mechanism.
 - Schemas differ per host (e.g. Qwen uses `httpUrl`, Codex uses `http_headers`, Copilot
   CLI omits the `mcpServers` wrapper). See `CLAUDE.md` for the full per-host schema table.
+- `sequential-thinking` is declared but disabled by default for **Claude Code only** —
+  `.mcp.json` has no per-server disable field, so `ClaudeCode/settings.json` turns it off
+  via `disabledMcpjsonServers`. Every other host runs it enabled.
 
 ## Filling in your keys
 

@@ -4,7 +4,8 @@
     "nixos": {
       "type": "local",
       "command": ["nix", "run", "github:utensils/mcp-nixos", "--"],
-      "enabled": true
+      "enabled": true,
+      "timeout": 60000
     },
     "context7": {
       "type": "remote",
@@ -12,22 +13,26 @@
       "headers": {
         "CONTEXT7_API_KEY": "YOUR_CONTEXT7_API_KEY"
       },
-      "enabled": true
+      "enabled": true,
+      "timeout": 60000
     },
     "microsoft-learn": {
       "type": "remote",
       "url": "https://learn.microsoft.com/api/mcp",
-      "enabled": true
+      "enabled": true,
+      "timeout": 60000
     },
     "filesystem": {
       "type": "local",
       "command": ["npx", "-y", "@modelcontextprotocol/server-filesystem", "/spacecraft-software"],
-      "enabled": true
+      "enabled": true,
+      "timeout": 60000
     },
     "fetch": {
       "type": "local",
       "command": ["uvx", "mcp-server-fetch"],
-      "enabled": true
+      "enabled": true,
+      "timeout": 60000
     },
     "engram": {
       "type": "local",
@@ -40,12 +45,14 @@
       "environment": {
         "BRAVE_API_KEY": "YOUR_BRAVE_API_KEY"
       },
-      "enabled": true
+      "enabled": true,
+      "timeout": 60000
     },
     "sequential-thinking": {
       "type": "local",
       "command": ["npx", "-y", "@modelcontextprotocol/server-sequential-thinking"],
-      "enabled": true
+      "enabled": true,
+      "timeout": 60000
     },
     "perplexity": {
       "type": "local",
@@ -53,12 +60,30 @@
       "environment": {
         "PERPLEXITY_API_KEY": "YOUR_PERPLEXITY_API_KEY"
       },
-      "enabled": true
+      "enabled": true,
+      "timeout": 60000
+    },
+    "terminal": {
+      "type": "local",
+      "command": ["npx", "-y", "mcp-server-terminal"],
+      "environment": {
+        "RUST_LOG": "error",
+        "NO_COLOR": "1",
+        "TERM": "dumb"
+      },
+      "enabled": true,
+      "timeout": 60000
     },
     "crates": {
       "type": "local",
       "command": ["crates-mcp"],
       "enabled": true
+    },
+    "bravais-cli": {
+      "type": "local",
+      "command": ["bravais-cli", "mcp"],
+      "enabled": true
     }
   }
 }
+

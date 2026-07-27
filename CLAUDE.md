@@ -70,7 +70,7 @@ To add support for a new MCP-capable tool:
 
 1. **Create new directory**: Named after the host tool (case-sensitive)
 2. **Add config template**: Follow the host's schema (use `host mcp add` if available)
-3. **Include all ten servers**: Maintain consistency across hosts
+3. **Include all twelve servers**: Maintain consistency across hosts
 4. **Add to fill-keys scripts**: Update the host-file list in all three shell scripts
 5. **Update README**: Add to the supported hosts table
 6. **Update CLAUDE.md**: Add to the layout table with schema notes
@@ -89,9 +89,8 @@ This repo carries the Standard §5.2 posture files and §4.3 REUSE metadata:
 
 Each directory is named after the host application that consumes the file. The
 files are **templates**; each holds only the MCP-relevant fragment (never a copy of a
-tool's full personal config, which would carry auth tokens). Each template declares the
-full **ten-server superset** (see below). Note this differs from the maintainer's live
-machine configs, which run only the three real servers — the six generic `npx`/token
+tool's full personal config, which would carry auth tokens). Each template declares the full **twelve-server superset** (see below). Note this differs from the maintainer's live
+machine configs, which run only the five real servers — the seven generic `npx`/token
 servers ship in the templates as placeholders, not in the live configs. Host config
 paths are noted below.
 
@@ -100,15 +99,15 @@ paths are noted below.
 | `Antigravity/mcp_config.json` | Antigravity | top-level `mcpServers`; remote = `serverUrl` + `headers` + `disabled` |
 | `VSCode/mcp.json` | VS Code | top-level `servers`; HTTP = `type:"http"` + `url`; secrets via separate `inputs` array |
 | `GitHubCopilotCLI/mcp-config.json` | Copilot CLI · `~/.copilot/mcp-config.json` | servers keyed at **top level, no wrapper**; stdio = `command`/`args`/`type:"stdio"`; http = `type:"http"` + `url` + `headers` |
-| `ClaudeCode/.mcp.json` | Claude Code · `~/.claude.json` (`mcpServers`) | `mcpServers`; stdio = `type:"stdio"` + `command`/`args`/`env`; http = `type:"http"` + `url` + `headers` |
+| `ClaudeCode/.mcp.json` + `ClaudeCode/settings.json` | Claude Code · `~/.claude.json` (`mcpServers`) + `~/.claude/settings.json` | `mcpServers`; stdio = `type:"stdio"` + `command`/`args`/`env`; http = `type:"http"` + `url` + `headers`. `.mcp.json` has **no per-server disable field** — `sequential-thinking` is declared but shipped off by default via `settings.json`'s `disabledMcpjsonServers` |
 | `OpenClaude/.mcp.json` | OpenClaude · `~/.openclaude.json` | identical to Claude Code (it's a fork) |
 | `Codex/config.toml` | OpenAI Codex · `~/.codex/config.toml` | TOML `[mcp_servers.<id>]`; http = `url` (+ `[mcp_servers.<id>.http_headers]`) |
 | `Grok/config.toml` | Grok CLI · `~/.grok/config.toml` | TOML `[mcp_servers.<id>]`; http = `url` + `enabled` (+ `[…​.headers]`) |
-| `Kimi/config.toml` | Kimi Code CLI · `~/.kimi-code/config.toml` | TOML `[mcp.client.servers.<name>]`; http = `url` (+ `[…​.headers]`) |
+| `Kimi/mcp.json` | Kimi Code CLI · `~/.kimi-code/mcp.json` | top-level `mcpServers`; stdio = `command`/`args`/`env`; http = `url` (+ `headers`, or Kimi's own `bearerTokenEnvVar`). **Not `config.toml`** — Kimi's `config.toml` has no MCP schema at all (confirmed against the installed binary); it's scoped to model/provider/loop-control/hooks only. Kimi resolves MCP servers from three tiers, later overriding earlier on name collision: user-global `~/.kimi-code/mcp.json`, project-root `<project>/.mcp.json` (Claude-compatible), project-local `<cwd>/.kimi-code/mcp.json` |
 | `Gemini/settings.json` (+ `mcp-server-enablement.json`) | Gemini CLI · `~/.gemini/` | `mcpServers`; http = `url` + `type:"http"` + `headers`; servers must also be enabled in `mcp-server-enablement.json` |
 | `Qwen/settings.json` | Qwen Code · `~/.qwen/settings.json` | `mcpServers`; **http = `httpUrl`** (no `type`/`url`) + `headers` |
-| `OpenCode/opencode.jsonc` | opencode · `~/.config/opencode/opencode.jsonc` | `mcp` block; local = `type:"local"` + `command:[…]`; remote = `type:"remote"` + `url` + `headers` + `enabled` |
-| `Mimo/mimocode.jsonc` | Mimo Code · `~/.config/mimocode/mimocode.jsonc` | identical to opencode (it's a fork) |
+| `OpenCode/opencode.jsonc` | opencode · `~/.config/opencode/opencode.jsonc` | `mcp` block; local = `type:"local"` + `command:[…]`; remote = `type:"remote"` + `url` + `headers` + `enabled`. `enabled` is **optional and defaults to on** — only an explicit `enabled: false` disables a server. Optional per-server `timeout` is in **ms** (default 30000) and is the only knob on the *connect* path; `experimental.mcp_timeout` covers requests only |
+| `Mimo/mimocode.jsonc` | Mimo Code · `~/.config/mimocode/mimocode.jsonc` | identical to opencode (it's a fork) — same `enabled`/`timeout` semantics, same merge order |
 | `Goose/config.yaml` | goose · `~/.config/goose/config.yaml` | YAML `extensions:`; stdio = `type:stdio` + `cmd`/`args`; remote = `type:streamable_http` + `uri` + `headers` |
 
 All files describe the **same logical set of servers** but are not interchangeable —
@@ -117,25 +116,53 @@ changing a server, update **every** file in its respective dialect. The fastest 
 get a tool's exact current schema is its own CLI: `claude mcp add`, `codex mcp add`,
 `gemini mcp add`, `qwen mcp add`, `grok mcp add` (and `<tool> mcp list` to verify).
 Copilot CLI, opencode, mimo, goose, and Kimi have no scriptable add command — hand-edit
-those files. Mind the traps: **Qwen uses `httpUrl`** while Gemini uses `url`+`type`;
-**Codex uses `http_headers`** while Grok/Kimi use `headers`; Copilot CLI omits the
-`mcpServers` wrapper; Gemini needs the separate enablement file and a trusted folder.
+those files (Kimi does have a built-in `/mcp-config` skill inside the Kimi Code TUI
+itself, just no non-interactive CLI verb). Mind the traps: **Qwen uses `httpUrl`** while
+Gemini uses `url`+`type`; **Codex uses `http_headers`** while Grok/Kimi use `headers`;
+Copilot CLI omits the `mcpServers` wrapper; Gemini needs the separate enablement file
+and a trusted folder; **Kimi's MCP config lives in `mcp.json`, never `config.toml`**
+despite Kimi using TOML for everything else it configures.
+
+### opencode / Mimo: merge order and disable semantics
+
+Both hosts **deep-merge, they do not first-match**: `config.json` → `<host>.json` →
+`<host>.jsonc`, applied in that order, so **the `.jsonc` wins key-for-key**. Keeping both a
+`.json` and a `.jsonc` in the same config dir is a footgun — a duplicated server in the
+`.json` looks live but is dead, and a stale API key there can silently shadow nothing at
+all while you debug the wrong file. Keep exactly one config file per host; the `.jsonc` is
+the right one to keep, because it is also where the TUI/CLI writes config edits
+(`opencode mcp add` and friends resolve to the first existing of
+`<host>.jsonc`, `<host>.json`, `config.json`) and where `bin/fill-keys.*` fills keys.
+
+Two more behaviours worth knowing when a server looks "disabled by default":
+
+- It isn't a default. `MCP.create` short-circuits **only** on an explicit `enabled === false`;
+  an absent `enabled` means enabled, for both `type:"local"` and `type:"remote"`.
+- The in-TUI `/mcp` panel (`mod+;`) toggles are **in-memory only** — `MCP.disconnect`
+  mutates a map that is rebuilt from the config file on every launch, and nothing MCP-related
+  is persisted to `opencode.db` or `~/.cache/opencode/`. The config file is the only durable
+  lever.
+
+Remote servers that fail OAuth land in `needs_auth` / `needs_client_registration` with only
+a transient toast — that is *not* the same state as `disabled`, and no config change causes it.
 
 ## The servers being configured
 
-Every host template declares all ten. Two groups:
+Every host template declares all twelve. Two groups:
 
-**The four "real" servers** (these run in the maintainer's live configs):
+**The five "real" servers** (these run in the maintainer's live configs):
 - **nixos** — `mcp-nixos` (queries nixpkgs / NixOS options). Antigravity runs the `mcp-nixos` binary directly; everywhere else it's `nix run github:utensils/mcp-nixos --` over stdio.
 - **context7** (Upstash) — HTTP, `https://mcp.context7.com/mcp`, needs a `CONTEXT7_API_KEY`. Stored inline under a header (`CONTEXT7_API_KEY` for most hosts; `Authorization: Bearer …` for VS Code, where it comes from a prompted `input`). Placeholder `YOUR_CONTEXT7_API_KEY`.
 - **microsoft-learn** — HTTP, `https://learn.microsoft.com/api/mcp`, no auth.
 - **crates** — stdio, `crates-mcp` ([crates-mcp](https://crates.io/crates/crates-mcp) via `cargo install`), queries Rust crates from crates.io and docs.rs.
+- **bravais-cli** — stdio, `bravais-cli mcp`, queries tool preferences and rewrites shell commands.
 
-**The six generic servers** (templates-only, placeholders):
+**The seven generic servers** (templates-only, placeholders):
 - **filesystem** — stdio, `npx -y @modelcontextprotocol/server-filesystem <path>`. Hardcoded path `/spacecraft-software` across all hosts.
 - **fetch**, **engram**, **sequential-thinking** — stdio, `npx -y @modelcontextprotocol/server-{fetch,sequential-thinking}` / `engram --db ~/.gemini/engram.db mcp`, no auth.
 - **brave-search** — stdio, `npx -y @brave/brave-search-mcp-server` ([brave-search-mcp-server](https://github.com/brave/brave-search-mcp-server)), env `BRAVE_API_KEY=YOUR_BRAVE_API_KEY`.
 - **perplexity** — stdio, `npx -y perplexity-mcp`, env `PERPLEXITY_API_KEY=YOUR_PERPLEXITY_API_KEY`.
+- **terminal** — stdio, `npx -y mcp-server-terminal` ([mcp-server-terminal](https://github.com/aybelatchane/mcp-server-terminal)), env `RUST_LOG=error`, `NO_COLOR=1`, `TERM=dumb` (keeps TUI output plain for the agent); no auth.
 
 ## Conventions
 
@@ -154,7 +181,7 @@ Every host template declares all ten. Two groups:
 The repository follows a **multi-host template pattern** where:
 
 1. **Each host directory** contains a single config file in that host's native format
-2. **All configs declare the same ten servers** but in different dialects
+2. **All configs declare the same twelve servers** but in different dialects
 3. **Templates use placeholders** for secrets that get filled at deployment time
 4. **No real secrets are committed** - placeholders ensure safety
 
@@ -194,7 +221,7 @@ Placeholders replaced in-place — keys never land in the repo
 ### Important Constraints
 
 1. **No Secrets in Git**: Placeholders ensure no API keys are ever committed
-2. **Schema Consistency**: All hosts must declare the same ten servers
+2. **Schema Consistency**: All hosts must declare the same twelve servers
 3. **Dialect Variations**: Each host uses different field names for the same concepts
 4. **REUSE Compliance**: All files licensed GPL-3.0-or-later via REUSE.toml
 5. **Signed Commits**: All commits must be cryptographically signed (§6.3)

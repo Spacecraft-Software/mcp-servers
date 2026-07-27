@@ -126,7 +126,7 @@ Claude Code|${HOME}/.claude.json
 OpenClaude|${HOME}/.openclaude.json
 Codex CLI|${HOME}/.codex/config.toml
 Grok|${HOME}/.grok/config.toml
-Kimi Code|${HOME}/.kimi-code/config.toml
+Kimi Code|${HOME}/.kimi-code/mcp.json
 Gemini (settings)|${HOME}/.gemini/settings.json
 Gemini (enablement)|${HOME}/.gemini/mcp-server-enablement.json
 Qwen Code|${HOME}/.qwen/settings.json

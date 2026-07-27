@@ -48,5 +48,19 @@ args = ["-y", "perplexity-mcp"]
 [mcp_servers.perplexity.env]
 PERPLEXITY_API_KEY = "YOUR_PERPLEXITY_API_KEY"
 
+[mcp_servers.terminal]
+command = "npx"
+args = ["-y", "mcp-server-terminal"]
+
+[mcp_servers.terminal.env]
+RUST_LOG = "error"
+NO_COLOR = "1"
+TERM = "dumb"
+
 [mcp_servers.crates]
 command = "crates-mcp"
+
+[mcp_servers.bravais-cli]
+command = "bravais-cli"
+args = ["mcp"]
+
