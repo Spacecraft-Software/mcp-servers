@@ -12,19 +12,35 @@ The only meaningful validation is that each config is well-formed JSON/TOML/YAML
 
 ### Validation and Testing
 
-- **Validate config syntax**: Run the validation script to ensure all configs parse correctly:
+- **Validate config syntax**: `.github/validate-configs.py` walks the tree (skipping `.git`)
+  and parses every `.json` / `.jsonc` / `.toml` / `.yaml` / `.yml` file by extension, exiting
+  non-zero and listing each malformed one. New host templates are picked up automatically —
+  there is no list to maintain.
+
+  It imports **PyYAML**, which the system Python on this machine does not carry, so a bare
+  `python3 .github/validate-configs.py` fails with `ModuleNotFoundError: No module named
+  'yaml'`. Supply it ephemerally instead:
   ```bash
-  python3 .github/validate-configs.py
+  uv run --no-project --with pyyaml python .github/validate-configs.py
   ```
-  This checks JSON/JSONC/TOML/YAML files and reports any syntax errors.
+  Or via nix, if you prefer:
+  ```bash
+  nix shell --impure --expr '(import <nixpkgs> {}).python3.withPackages(ps: [ps.pyyaml])' \
+    --command python3 .github/validate-configs.py
+  ```
+  The plain `python3 .github/validate-configs.py` is correct anywhere PyYAML is already
+  present — that is what CI runs, after a `pip install`. `tomllib` is stdlib on Python 3.11+
+  and needs nothing.
 
 - **REUSE compliance check**: Ensure all files have proper licensing metadata:
   ```bash
   reuse lint
   ```
-  This validates that REUSE.toml covers all files with GPL-3.0-or-later.
+  This validates that REUSE.toml covers all files with GPL-3.0-or-later. `reuse` is on PATH
+  here; `nix run nixpkgs#reuse -- lint` works where it is not.
 
-- **CI validation**: The GitHub Actions workflow runs both validation and REUSE lint on every push/PR.
+- **CI validation**: `.github/workflows/ci.yml` runs both on every push to `main` and every
+  PR — Python 3.12, `pip install reuse pyyaml`, then `reuse lint` and the validation script.
 
 ### Key Filling and Deployment
 
