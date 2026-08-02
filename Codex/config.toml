@@ -24,7 +24,7 @@ args = ["-y", "@modelcontextprotocol/server-filesystem", "/spacecraft-software"]
 
 [mcp_servers.fetch]
 command = "uvx"
-args = ["mcp-server-fetch"]
+args = ["--with", "mcp<2", "mcp-server-fetch"]
 
 [mcp_servers.engram]
 command = "engram"
