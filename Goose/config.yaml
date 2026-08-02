@@ -41,6 +41,8 @@ extensions:
     type: stdio
     cmd: uvx
     args:
+      - --with
+      - mcp<2
       - mcp-server-fetch
     enabled: true
     timeout: 300

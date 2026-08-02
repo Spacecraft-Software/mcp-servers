@@ -187,7 +187,7 @@ Every host template declares all twelve. Two groups:
 
 **The seven generic servers** (templates-only, placeholders):
 - **filesystem** — stdio, `npx -y @modelcontextprotocol/server-filesystem <path>`. Hardcoded path `/spacecraft-software` across all hosts.
-- **fetch**, **engram**, **sequential-thinking** — stdio, `npx -y @modelcontextprotocol/server-{fetch,sequential-thinking}` / `engram --db ~/.gemini/engram.db mcp`, no auth.
+- **fetch**, **engram**, **sequential-thinking** — stdio, no auth. `fetch` is `uvx --with 'mcp<2' mcp-server-fetch`; `sequential-thinking` is `npx -y @modelcontextprotocol/server-sequential-thinking`; `engram` is `engram --db ~/.gemini/engram.db mcp`. **The `mcp<2` pin on fetch is load-bearing**: `mcp-server-fetch` 2026.7.10 (latest) declares only `mcp>=1.1.3` but imports `McpError`, which mcp 2.0.0 renamed to `MCPError` — unpinned, the server dies at import with `ImportError: cannot import name 'McpError'` and the host reports `calling "initialize": EOF`. Drop the pin only once upstream ships a release that imports `MCPError`.
 - **brave-search** — stdio, `npx -y @brave/brave-search-mcp-server` ([brave-search-mcp-server](https://github.com/brave/brave-search-mcp-server)), env `BRAVE_API_KEY=YOUR_BRAVE_API_KEY`.
 - **perplexity** — stdio, `npx -y perplexity-mcp`, env `PERPLEXITY_API_KEY=YOUR_PERPLEXITY_API_KEY`.
 - **terminal** — stdio, `npx -y mcp-server-terminal` ([mcp-server-terminal](https://github.com/aybelatchane/mcp-server-terminal)), env `RUST_LOG=error`, `NO_COLOR=1`, `TERM=dumb` (keeps TUI output plain for the agent); no auth.

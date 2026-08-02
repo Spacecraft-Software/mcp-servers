@@ -11,7 +11,7 @@ host's own dialect. They all wire up the same twelve servers:
 | **microsoft-learn** | http | `https://learn.microsoft.com/api/mcp` — Microsoft Learn docs | none |
 | **bravais-cli** | stdio | `bravais-cli mcp` — Bravais OS command replacement and shell translator | none |
 | **filesystem** | stdio | `npx -y @modelcontextprotocol/server-filesystem <path>` — sandboxed file access | none (set a path) |
-| **fetch** | stdio | `uvx mcp-server-fetch` — fetch live web content | none |
+| **fetch** | stdio | `uvx --with 'mcp<2' mcp-server-fetch` — fetch live web content (the `mcp<2` pin is required: mcp-server-fetch 2026.7.10 imports `McpError`, renamed to `MCPError` in mcp 2.0) | none |
 | **engram** | stdio | `engram --db ~/.gemini/engram.db mcp` — shared verbatim chat memory | none |
 | **brave-search** | stdio | `npx -y @brave/brave-search-mcp-server` — web, local, news, image, video search | `BRAVE_API_KEY` |
 | **perplexity** | stdio | `npx -y perplexity-mcp` — Perplexity search | `PERPLEXITY_API_KEY` |

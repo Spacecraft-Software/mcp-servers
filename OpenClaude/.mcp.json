@@ -27,7 +27,7 @@
     "fetch": {
       "type": "stdio",
       "command": "uvx",
-      "args": ["mcp-server-fetch"],
+      "args": ["--with", "mcp<2", "mcp-server-fetch"],
       "env": {}
     },
     "engram": {
