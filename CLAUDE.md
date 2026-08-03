@@ -4,104 +4,92 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-A personal collection of **MCP (Model Context Protocol) server configurations**, one config file per host application. There is no source code, no build, and no test suite — the deliverable is the config files themselves. It is a Spacecraft Software-umbrella project (Personal posture, `GPL-3.0-or-later`); its GitHub remote is `Spacecraft-Software/mcp-servers` (migrated from `UnbreakableMJ/mcp-servers`).
+A personal collection of **MCP (Model Context Protocol) server configurations**, one config file per host application. The deliverable is the config files themselves, but they are no longer written by hand: `mcp.toml` is the source of truth and `mcpctl/` (Rust) generates the templates, checks them, and deploys them to the live configs under `$HOME`. It is a Spacecraft Software-umbrella project (Personal posture, `GPL-3.0-or-later`); its GitHub remote is `Spacecraft-Software/mcp-servers` (migrated from `UnbreakableMJ/mcp-servers`).
 
-The only meaningful validation is that each config is well-formed JSON/TOML/YAML and matches the schema its host expects, and that `reuse lint` stays clean.
+Validation is that each config is well-formed and matches its host's schema, that every host declares the same servers (`mcpctl check`), that the templates still match the manifest (`mcpctl render --check`), and that `reuse lint` stays clean.
 
 ## Common Development Tasks
 
-### Validation and Testing
+Everything goes through `mcpctl`, a Rust binary in `mcpctl/`. **`mcp.toml` at the repo
+root is the single source of truth**; every file under a host directory is generated from
+it and must never be hand-edited.
 
-- **Validate config syntax**: `.github/validate-configs.py` walks the tree (skipping `.git`)
-  and parses every `.json` / `.jsonc` / `.toml` / `.yaml` / `.yml` file by extension, exiting
-  non-zero and listing each malformed one. New host templates are picked up automatically —
-  there is no list to maintain.
+The toolchain: `nix develop` (the `rustup` toolchains on this machine are linked against
+`/lib64/ld-linux-x86-64.so.2` and cannot execute on NixOS), then
+`cargo build --release --manifest-path mcpctl/Cargo.toml`.
 
-  It imports **PyYAML**, which the system Python on this machine does not carry, so a bare
-  `python3 .github/validate-configs.py` fails with `ModuleNotFoundError: No module named
-  'yaml'`. Supply it ephemerally instead:
-  ```bash
-  uv run --no-project --with pyyaml python .github/validate-configs.py
-  ```
-  Or via nix, if you prefer:
-  ```bash
-  nix shell --impure --expr '(import <nixpkgs> {}).python3.withPackages(ps: [ps.pyyaml])' \
-    --command python3 .github/validate-configs.py
-  ```
-  The plain `python3 .github/validate-configs.py` is correct anywhere PyYAML is already
-  present — that is what CI runs, after a `pip install`. `tomllib` is stdlib on Python 3.11+
-  and needs nothing.
+| Command | What it does |
+|---------|--------------|
+| `mcpctl check` | Every template parses, every host declares the same twelve servers, and no host disagrees about how to invoke one. Replaces the old `.github/validate-configs.py`. |
+| `mcpctl render` | Regenerates all 13 templates plus the two companion files from `mcp.toml`. |
+| `mcpctl render --check` | Fails instead of writing. CI gate against hand-edited templates. |
+| `mcpctl deploy` | Pushes the manifest into the ~17 live configs under `$HOME`. |
+| `mcpctl fill-keys` | Writes real API keys into the live configs. |
 
-- **REUSE compliance check**: Ensure all files have proper licensing metadata:
-  ```bash
-  reuse lint
-  ```
-  This validates that REUSE.toml covers all files with GPL-3.0-or-later. `reuse` is on PATH
-  here; `nix run nixpkgs#reuse -- lint` works where it is not.
+`--json` on any command gives a machine-readable envelope. `cargo test` covers dialect
+round-trips, the documented host quirks, and the in-place splice.
 
-- **CI validation**: `.github/workflows/ci.yml` runs both on every push to `main` and every
-  PR — Python 3.12, `pip install reuse pyyaml`, then `reuse lint` and the validation script.
+### Changing a server
 
-### Key Filling and Deployment
+1. Edit `mcp.toml` — never a file under a host directory.
+2. `mcpctl render` — updates all 13 templates.
+3. `mcpctl deploy` — propagates to the live configs. **This step is the point of the
+   tool.** Nothing reads the templates; they are a reference, not a source. Historically
+   a change that stopped at step 2 reached no host while `git status` stayed clean —
+   that is how the `fetch` `mcp<2` pin (`cc1fcfb`) shipped correct in all 13 templates
+   and broken on every host, and how `perplexity` sat in every template and only 7 of 15
+   live configs.
+4. Restart every host. A failed MCP server is not retried in-process.
 
-The fill-keys scripts substitute the three placeholder tokens
-(`YOUR_CONTEXT7_API_KEY`, `YOUR_BRAVE_API_KEY`, `YOUR_PERPLEXITY_API_KEY`) with real
-values **directly in the live config files** under `$HOME`. They never write to `dist/`,
-never take an output path, and never touch the tracked templates — which is what keeps the
-no-secrets rule intact. Requires [`sd`](https://github.com/chmln/sd)
-(`cargo install sd`, or `nix run nixpkgs#sd`).
+A deliberate per-host difference goes in `[servers.overrides.<Host>]` with a comment
+saying why. Anything not recorded there is drift and `mcpctl check` fails on it.
 
-- **Interactive (the normal path)**: run with no arguments. Missing keys are prompted for
-  with echo off (blank input skips that key), then each live config gets its own
-  `Fill keys in <label> (<path>)? [Y/n]` prompt, so you choose which hosts are touched:
-  ```bash
-  sh bin/fill-keys.sh          # POSIX / Bash / Brush / dash / ash
-  nu bin/fill-keys.nu          # Nushell
-  ion bin/fill-keys.ion        # Ion
-  ```
+### Adding a new host
 
-- **Keys from the environment**: any key already exported is used without a prompt; the
-  per-file Y/N prompts still apply.
-  ```bash
-  # POSIX / Bash / Brush — also the right way to launch the nu and ion ports
-  CONTEXT7_API_KEY=… BRAVE_API_KEY=… PERPLEXITY_API_KEY=… sh bin/fill-keys.sh
+Two edits, because the split matters:
 
-  # from inside Nushell
-  $env.CONTEXT7_API_KEY = "…"; nu bin/fill-keys.nu
-  ```
+- **`mcpctl/src/dialect.rs`** — one row in `HOSTS`, describing the host's *mechanics*:
+  which key holds a URL, whether env vars go under `env` / `environment` / `envs`,
+  whether the command is split or joined, indentation, the `type` values, how it spells
+  "enabled". These are facts about the host's schema, so they live in code.
+- **`mcp.toml`** — one `[[hosts]]` entry giving the template path, the live config
+  path(s), and any flags (`header`, `schema_url`, `emit_inputs`, `prune_strays`,
+  `guard_process`, companion files). This is content, so it lives in the manifest.
 
-- **Unattended / CI**: `--yes` skips every Y/N prompt. Prompting also switches itself off
-  whenever stdin is not a TTY or `CI` / `CLAUDECODE` is set, so an agent-driven run never
-  blocks on a prompt — supply the keys as env vars in that case.
-  ```bash
-  sh bin/fill-keys.sh --yes
-  ```
+Then `mcpctl render`. The manifest validates that the two sides agree: a host in one and
+not the other is an error, not a silent omission.
 
-The only flags are `--yes` and `-h`/`--help` (the Nushell port also accepts `-y`). Ion eats
-`-h`/`--help`, so its usage text is best-effort (see the note in `bin/fill-keys.ion`). The
-live-config path list lives in all three scripts and must stay in sync across them — see
-[Tooling](#tooling).
+### Deploying safely
 
-### Adding or Modifying Servers
+`deploy` writes files the user and their tools own, so it holds these properties. Do not
+weaken them:
 
-When adding a new server or modifying an existing one:
+- **Only the MCP block moves.** It is located by byte range and spliced; `~/.claude.json`
+  is 238 KB / 6,835 lines of which ~60 change. TOML goes through `toml_edit`, which
+  preserves untouched spans natively.
+- **Unmanaged servers are preserved byte-for-byte.** goose keeps ~16 builtin/platform
+  extensions in the same `extensions` block (`prune_strays = false` for that reason).
+  Elsewhere a stray may be pruned, but only after an explicit `y`.
+- **Secrets.** A real key already in the live file is carried into the rewritten block. A
+  secret with no available value is **omitted, not written as a placeholder** — a literal
+  `YOUR_CONTEXT7_API_KEY` is sent as a credential and rejected, whereas an absent header
+  leaves Context7 working anonymously. Placeholders belong in templates, which are
+  documentation.
+- **Empty collections are preserved.** The emitters must write `available_tools: []` and
+  `settings: {}` rather than skipping them; skipping silently stripped keys from 13 goose
+  extensions.
+- **Never corrupt.** The result is re-parsed (managed servers only — builtins legitimately
+  have neither `cmd` nor `uri`) before writing, the write is a rename over a fully written
+  temporary, and the previous contents go to `~/.mcp-backup/<ISO8601>/`.
+- **Running-host guard.** Claude Code rewrites `~/.claude.json` on exit, so `deploy`
+  refuses that host while `claude` is running. `--force` overrides.
+- **Dry-run by default** with no TTY, or when `CI` / `CLAUDECODE` is set. An agent-driven
+  run reports; it does not write.
 
-1. **Update all host templates**: Each server must be declared in every host's config file using that host's specific schema dialect
-2. **Follow schema conventions**: Pay attention to host-specific field names (e.g., Qwen uses `httpUrl`, others use `url`)
-3. **Preserve indentation**: Antigravity uses 2-space, VSCode uses tabs
-4. **Use placeholders for secrets**: Never commit real API keys
-5. **Update documentation**: Modify README.md server table and CLAUDE.md schema table
-
-### Adding a New Host
-
-To add support for a new MCP-capable tool:
-
-1. **Create new directory**: Named after the host tool (case-sensitive)
-2. **Add config template**: Follow the host's schema (use `host mcp add` if available)
-3. **Include all twelve servers**: Maintain consistency across hosts
-4. **Add to fill-keys scripts**: Update the host-file list in all three shell scripts
-5. **Update README**: Add to the supported hosts table
-6. **Update CLAUDE.md**: Add to the layout table with schema notes
+`deploy` and `fill-keys` build server entries through the same `render::server_entry` +
+`deploy::resolve_secrets` path. That is load-bearing: an earlier `fill-keys` patched the
+live object directly, which appended `env` *after* `disabled` while `deploy` emits it
+before, so the two commands reordered each other's output forever.
 
 ## Compliance & posture (Spacecraft Software Standard)
 
@@ -160,7 +148,7 @@ Both hosts **deep-merge, they do not first-match**: `config.json` → `<host>.js
 all while you debug the wrong file. Keep exactly one config file per host; the `.jsonc` is
 the right one to keep, because it is also where the TUI/CLI writes config edits
 (`opencode mcp add` and friends resolve to the first existing of
-`<host>.jsonc`, `<host>.json`, `config.json`) and where `bin/fill-keys.*` fills keys.
+`<host>.jsonc`, `<host>.json`, `config.json`) and where `mcpctl` reads and writes.
 
 Two more behaviours worth knowing when a server looks "disabled by default":
 
@@ -180,7 +168,7 @@ Every host template declares all twelve. Two groups:
 
 **The five "real" servers** (these run in the maintainer's live configs):
 - **nixos** — `mcp-nixos` (queries nixpkgs / NixOS options). Antigravity runs the `mcp-nixos` binary directly; everywhere else it's `nix run github:utensils/mcp-nixos --` over stdio.
-- **context7** (Upstash) — HTTP, `https://mcp.context7.com/mcp`, needs a `CONTEXT7_API_KEY`. Stored inline under a header (`CONTEXT7_API_KEY` for most hosts; `Authorization: Bearer …` for VS Code, where it comes from a prompted `input`). Placeholder `YOUR_CONTEXT7_API_KEY`.
+- **context7** (Upstash) — HTTP, `https://mcp.context7.com/mcp`, needs a `CONTEXT7_API_KEY`. Sent as `Authorization: Bearer <key>` on every host (VS Code supplies it from a prompted `input`; everywhere else the placeholder `YOUR_CONTEXT7_API_KEY` is filled in). The older `CONTEXT7_API_KEY:` header still authenticates — verified against the live endpoint, where a bad key under it is rejected rather than ignored — but it is undocumented upstream, and because unauthenticated requests also succeed at a lower rate limit, a header that stopped being read would be indistinguishable from one that works.
 - **microsoft-learn** — HTTP, `https://learn.microsoft.com/api/mcp`, no auth.
 - **crates** — stdio, `crates-mcp` ([crates-mcp](https://crates.io/crates/crates-mcp) via `cargo install`), queries Rust crates from crates.io and docs.rs.
 - **bravais-cli** — stdio, `bravais-cli mcp`, queries tool preferences and rewrites shell commands.
@@ -194,103 +182,111 @@ Every host template declares all twelve. Two groups:
 
 ## Conventions
 
-- Antigravity's file uses **2-space** indentation; VS Code's uses **tabs**. Preserve each file's existing style. Host directory names are **case-sensitive and canonical** (`Antigravity/`, `VSCode/`) — do not reintroduce lowercase `antigravity/` or `.vscode/` variants (a past PR did; they were consolidated).
+- Antigravity's file uses **2-space** indentation; VS Code's uses **tabs**. This is encoded as `indent` on each `Host`, so the renderer preserves it for you. Host directory names are **case-sensitive and canonical** (`Antigravity/`, `VSCode/`) — do not reintroduce lowercase `antigravity/` or `.vscode/` variants (a past PR did; they were consolidated).
 - Never commit a real secret — templates carry placeholders (`YOUR_CONTEXT7_API_KEY`, `YOUR_BRAVE_API_KEY`, `YOUR_PERPLEXITY_API_KEY`). The filesystem server uses the hardcoded `/spacecraft-software` path. Servers needing placeholders stay inert until filled in locally.
-- Templates are the **canonical superset**; the maintainer's live machine runs the three real servers only. When changing a server, update **every** host template in its dialect (and the live config too, for the three real servers).
+- Templates are **generated from `mcp.toml`** and are the canonical superset. Never edit one by hand; change the manifest and run `mcpctl render`, then `mcpctl deploy` to reach the hosts.
 
 ## Tooling
 
-`bin/fill-keys.{nu,sh,ion}` substitute the three placeholder tokens (`YOUR_CONTEXT7_API_KEY`, `YOUR_BRAVE_API_KEY`, `YOUR_PERPLEXITY_API_KEY`) with values from env vars and write them **directly into the live config files** — they never touch the tracked templates, so the no-secrets rule holds. Before modifying each file, the script presents a Y/N prompt (skippable with `--yes`). The `.sh`/`.ion` ports shell out to `sd` (literal `-s` mode); the `.nu` port uses native string ops. There are three parallel ports (Nushell, POSIX/Bash/Brush, Ion) with identical behavior — **change all three together** (their live-config path lists must stay in sync). Shell-specific gotchas worth knowing if you edit them: Ion's `test -t` is unreliable (use `tty -s`), Ion eats `-h`/`--help`, and Ion's `test` needs the POSIX `x`-prefix guard for `--`-leading operands.
+`mcpctl/` is a Rust binary — the repo's only build target. `nix develop` provides the
+toolchain; `flake.nix` also exposes it as a package. `Cargo.lock` is tracked.
 
-## Code Architecture and Structure
+It superseded `.github/validate-configs.py` (which only checked that files parsed, not
+that they agreed) and `bin/fill-keys.{nu,sh,ion}`.
 
-### High-Level Architecture
+The three shell ports are **retained as legacy**, for machines without a Rust toolchain,
+and carry a banner saying so. Keep their path lists in sync with `mcp.toml` — they had
+already drifted, missing `~/.gemini/antigravity-ide/mcp_config.json` entirely. They are
+plain `sd` substitution and can only fill a placeholder that is already present, so they
+are of little use after a `deploy` (which never writes one).
 
-The repository follows a **multi-host template pattern** where:
+Two traps if you edit them, both found by running the ports rather than reading them:
+`sd '|' '\n'` treats `|` as a regex alternation matching at every position — the Ion port
+did this and silently skipped all 15 files while printing "Filled 3 of 3 placeholders" —
+and adding `-s` fixes the pattern but then emits a literal backslash-n as the replacement.
+The Ion port now iterates paths directly and splits nothing.
 
-1. **Each host directory** contains a single config file in that host's native format
-2. **All configs declare the same twelve servers** but in different dialects
-3. **Templates use placeholders** for secrets that get filled at deployment time
-4. **No real secrets are committed** - placeholders ensure safety
-
-### Key Components
-
-1. **Host Config Templates** (`*/*.json`, `*/*.toml`, `*/*.yaml`):
-   - JSON/TOML/YAML files following each host's MCP schema
-   - Contain placeholder values for API keys and paths
-   - Organized by host tool name in separate directories
-
-2. **Key Filling Scripts** (`bin/fill-keys.*`):
-   - Three parallel implementations for different shells
-   - Substitute placeholders with real values from environment variables
-   - Fill directly into live config files with per-file Y/N confirmation
-   - Never modify tracked templates
-
-3. **Validation System** (`.github/validate-configs.py`):
-   - Parses all config files to ensure valid syntax
-   - Handles JSONC (with comment stripping), JSON, TOML, YAML
-   - Runs automatically in CI on every push/PR
-
-4. **Documentation** (`README.md`, `CLAUDE.md`, `CONTRIBUTING.md`):
-   - Comprehensive guides for usage and contribution
-   - Schema reference tables for each host
-   - Project posture and licensing information
-
-### Data Flow
+## Code architecture
 
 ```
-Template Files (tracked)  →  reference for what each host config should look like
-                                ↓
-Live Config Files (untracked, ~/.gemini/, ~/.config/opencode/, etc.)
-  ↓ (fill-keys scripts with env vars + Y/N confirmation per file)
-Placeholders replaced in-place — keys never land in the repo
+mcp.toml                 content: which servers exist, where each host's files live
+mcpctl/src/dialect.rs    mechanics: how each host spells the same concepts
+        |
+        +-- render  ---> 13 tracked templates (generated, never hand-edited)
+        |                        |
+        +-- deploy  ------------ + ---> ~17 live configs under $HOME
+        +-- fill-keys ------------------^  (real keys, never in the repo)
+        +-- check   ---> parity across templates (CI gate)
 ```
 
-### Important Constraints
+The content/mechanics split is the organizing idea. A server change touches only
+`mcp.toml`; a newly supported host touches only `HOSTS` plus one `[[hosts]]` entry.
+Neither requires understanding the other.
 
-1. **No Secrets in Git**: Placeholders ensure no API keys are ever committed
-2. **Schema Consistency**: All hosts must declare the same twelve servers
-3. **Dialect Variations**: Each host uses different field names for the same concepts
-4. **REUSE Compliance**: All files licensed GPL-3.0-or-later via REUSE.toml
-5. **Signed Commits**: All commits must be cryptographically signed (§6.3)
+### Modules
 
-## Development Workflow
+| Module | Responsibility |
+|--------|----------------|
+| `manifest.rs` | Parses and validates `mcp.toml`; applies per-host overrides |
+| `dialect.rs` | The `HOSTS` table; parses any host file into a normalized `Transport` |
+| `emit.rs` | JSON / TOML / YAML writers tuned to look hand-written |
+| `render.rs` | Manifest into templates |
+| `splice.rs` | Locating and replacing just the MCP block of a live file |
+| `deploy.rs` | Merge, secret resolution, backup, atomic write |
+| `fill_keys.rs` | Real keys into live configs |
+| `check.rs` | Cross-host parity |
 
-### Typical Session
+The 13 hosts do **not** get 13 renderers. They differ along ~9 axes captured as fields on
+`Host`, interpreted by three serializers. Every trap in the schema table below is one
+field: Qwen's `httpUrl` is `url_field`, Codex's `http_headers` is `headers_field`,
+Copilot's missing wrapper is `wrapper: None`, opencode's `environment` is `env_field`.
 
-1. **Make changes**: Edit config templates or add new host support
-2. **Validate**: Run `python3 .github/validate-configs.py`
-3. **Fill keys**: Run `sh bin/fill-keys.sh --yes` with env vars set
-4. **Check REUSE**: Run `reuse lint`
-5. **Commit**: Use signed commits with conventional commit messages
-6. **Push**: CI will validate on GitHub
+Comparison in `check` runs on normalized `Transport` values, never on raw keys. A naive
+key-level comparison reports opencode as "missing `env`" when it uses `environment` — a
+false positive an early throwaway script actually produced.
 
-### Adding a New Host Example
+### Constraints
 
-```bash
-# 1. Create new host directory
-mkdir -p NewHost
+1. **No secrets in git.** Templates carry placeholders; real keys only ever reach `$HOME`.
+2. **Templates are generated.** Hand-editing one is reverted by the next `render`, and CI
+   fails on the difference.
+3. **Live configs belong to their tools.** See "Deploying safely" above.
+4. **All hosts declare the same twelve servers**, modulo recorded overrides.
+5. **REUSE compliance** — every file `GPL-3.0-or-later` via `REUSE.toml`.
+6. **Signed commits** (§6.3).
 
-# 2. Add config template following host's schema
-# Use the host's own `mcp add` command if available, or manual creation
+## Development workflow
 
-# 3. Add to fill-keys scripts
-# Edit bin/fill-keys.sh, bin/fill-keys.nu, bin/fill-keys.ion
-# Add entry in the live-config list: label and path under $HOME
+```sh
+nix develop
+cargo test  --manifest-path mcpctl/Cargo.toml
+cargo clippy --manifest-path mcpctl/Cargo.toml --all-targets -- -D warnings
+cargo build --release --manifest-path mcpctl/Cargo.toml
 
-# 4. Update documentation
-# Edit README.md (supported hosts table)
-# Edit CLAUDE.md (layout table and schema notes)
-
-# 5. Validate
-python3 .github/validate-configs.py
+./mcpctl/target/release/mcpctl check
+./mcpctl/target/release/mcpctl render --check
 reuse lint
 ```
 
-### Common Pitfalls
+Before changing `deploy` or `fill_keys`, exercise them against a copy of the real configs
+rather than reasoning about the code:
 
-1. **Schema Mismatches**: Qwen uses `httpUrl`, others use `url` + `type`
-2. **Indentation**: VSCode uses tabs, Antigravity uses 2 spaces
-3. **Wrapper Keys**: Copilot CLI has no `mcpServers` wrapper, others do
-4. **Header Names**: Codex uses `http_headers`, others use `headers`
-5. **Placeholder Consistency**: Must use exact placeholder strings across all files
+```sh
+mkdir -p /tmp/homesim && cp -r ~/.codex ~/.gemini ~/.config/goose /tmp/homesim/   # etc.
+HOME=/tmp/homesim ./mcpctl/target/release/mcpctl deploy --yes --force
+```
+
+Both bugs that mattered — 13 goose extensions silently losing `available_tools: []`, and
+placeholders being written into live configs as credentials — were found this way and
+would not have been found by reading the diff.
+
+### Common pitfalls
+
+1. **Schema mismatches**: Qwen uses `httpUrl`; Codex uses `http_headers`; Copilot CLI has
+   no wrapper; opencode uses `environment` and a joined command array; goose uses
+   `cmd`/`envs`/`uri`. All are pinned by `documented_host_quirks_survive`.
+2. **Editing a template instead of `mcp.toml`** — silently reverted.
+3. **Skipping `deploy`** — the original failure mode this tool exists to prevent.
+4. **Dropping an empty collection** when emitting; it is someone else's data.
+5. **Ordering.** `serde_json` and `toml` are both built with `preserve_order`; without it
+   env blocks alphabetize themselves. Use `shift_remove`, never `remove`, on these maps.

@@ -7,7 +7,7 @@ host's own dialect. They all wire up the same twelve servers:
 | Server | Transport | Endpoint / command | Auth |
 |--------|-----------|--------------------|------|
 | **nixos** | stdio | `nix run github:utensils/mcp-nixos --` ([mcp-nixos](https://github.com/utensils/mcp-nixos)) — nixpkgs / NixOS options | none |
-| **context7** | http | `https://mcp.context7.com/mcp` — Upstash Context7 library docs | `CONTEXT7_API_KEY` |
+| **context7** | http | `https://mcp.context7.com/mcp` — Upstash Context7 library docs | `CONTEXT7_API_KEY`, sent as `Authorization: Bearer` |
 | **microsoft-learn** | http | `https://learn.microsoft.com/api/mcp` — Microsoft Learn docs | none |
 | **bravais-cli** | stdio | `bravais-cli mcp` — Bravais OS command replacement and shell translator | none |
 | **filesystem** | stdio | `npx -y @modelcontextprotocol/server-filesystem <path>` — sandboxed file access | none (set a path) |
@@ -40,6 +40,50 @@ need a token or path filled in before they work (see Notes).
 | `Mimo/` | Mimo Code | `~/.config/mimocode/mimocode.jsonc` |
 | `Goose/` | goose | `~/.config/goose/config.yaml` |
 
+## Using it
+
+Everything goes through `mcpctl`. `mcp.toml` at the repository root is the single source
+of truth; the host directories are **generated** from it.
+
+```sh
+nix develop                    # cargo toolchain (see Notes)
+cargo build --release --manifest-path mcpctl/Cargo.toml
+alias mcpctl=./mcpctl/target/release/mcpctl
+
+mcpctl check                   # every template parses and every host agrees
+mcpctl render                  # regenerate the 13 templates from mcp.toml
+mcpctl render --check          # fail instead of writing (this is what CI runs)
+mcpctl deploy --dry-run        # what would change in your live configs under $HOME
+mcpctl deploy --yes            # apply it
+mcpctl fill-keys               # put real API keys into the live configs
+```
+
+Add `--json` to any command for machine-readable output.
+
+**Changing a server is now one edit.** Edit `mcp.toml`, run `mcpctl render` to update all
+13 templates, then `mcpctl deploy` to push it to the hosts, then restart the hosts. The
+second step is the one that used to be missed: nothing reads the templates, so a change
+that stops at `render` reaches no host while `git status` stays clean.
+
+### Deploying to live configs
+
+`deploy` edits files your tools own, so it is deliberately conservative:
+
+- **Only the MCP block is replaced**, located by byte range. Deploying into a 238 KB
+  `~/.claude.json` changes ~60 lines and leaves the other 6,800 byte-identical.
+- **Servers it does not manage are never dropped.** goose keeps ~16 builtin extensions in
+  the same block; they are reported and preserved. Elsewhere a stray can be pruned, but
+  only after an explicit `y`.
+- **A working key is never replaced by a placeholder**, and a placeholder is never written
+  into a live config — an unfilled secret is omitted and reported instead, because a
+  rejected credential is worse than an absent one.
+- **Every rewrite is re-parsed before it is written**, the write is a rename over a fully
+  written temporary, and the previous contents are copied to `~/.mcp-backup/<timestamp>/`.
+- **It refuses to write to a config whose host is running** (Claude Code rewrites
+  `~/.claude.json` on exit, silently reverting a deploy). Exit the host, or pass `--force`.
+- **It defaults to `--dry-run`** whenever there is no terminal, or `CI` / `CLAUDECODE` is
+  set, so an automated run reports rather than writes.
+
 ## Notes
 
 - Files are **templates** with placeholders — replace these locally, never commit real
@@ -52,42 +96,54 @@ need a token or path filled in before they work (see Notes).
   CLI omits the `mcpServers` wrapper). See `CLAUDE.md` for the full per-host schema table.
 - `sequential-thinking` is declared but disabled by default for **Claude Code only** —
   `.mcp.json` has no per-server disable field, so `ClaudeCode/settings.json` turns it off
-  via `disabledMcpjsonServers`. Every other host runs it enabled.
+  via `disabledMcpjsonServers`. Every other host runs it enabled. This is expressed once
+  in `mcp.toml` as a per-host `enabled = false` override.
+- **Do not hand-edit a file under a host directory.** They are generated; the next
+  `mcpctl render` overwrites them, and CI fails when they disagree with `mcp.toml`.
+- The build needs a working cargo. `nix develop` provides one; a `rustup` toolchain works
+  on most systems but not on NixOS, where the downloaded binaries are linked against an
+  ELF interpreter that does not exist there.
 
 ## Filling in your keys
 
-`bin/fill-keys.*` substitutes the placeholders with your real values **directly in the
-live config files** — the tracked templates are never modified, so no secret is ever
-committed. Before modifying each file, the script asks for confirmation (use `--yes` to
-auto-approve). The same tool is provided for three shells (pick whichever you run); all
-behave identically:
+`mcpctl fill-keys` writes your real values **into the live config files** under `$HOME`.
+The tracked templates are never touched, so no secret can be committed.
 
-| Script | Shell | Notes |
-|--------|-------|-------|
-| `bin/fill-keys.nu` | Nushell | no external deps (native string ops) |
-| `bin/fill-keys.sh` | POSIX sh / Bash / Brush | needs [`sd`](https://github.com/chmln/sd) |
-| `bin/fill-keys.ion` | Ion | needs `sd`; Ion eats `-h`/`--help` itself, so see the file header for usage |
-
-| Env var | Fills | Server |
-|---------|-------|--------|
-| `CONTEXT7_API_KEY` | `YOUR_CONTEXT7_API_KEY` | context7 |
-| `BRAVE_API_KEY` | `YOUR_BRAVE_API_KEY` | brave-search |
-| `PERPLEXITY_API_KEY` | `YOUR_PERPLEXITY_API_KEY` | perplexity |
+| Env var | Server | Where it lands |
+|---------|--------|----------------|
+| `CONTEXT7_API_KEY` | context7 | a request header |
+| `BRAVE_API_KEY` | brave-search | an environment variable |
+| `PERPLEXITY_API_KEY` | perplexity | an environment variable |
 
 ```sh
-# Provide values via env vars (any you omit are prompted for, or left as placeholders
-# when run non-interactively). Use whichever script matches your shell:
-CONTEXT7_API_KEY=ctx7sk-... BRAVE_API_KEY=... PERPLEXITY_API_KEY=pplx-... \
-  nu bin/fill-keys.nu          # or: sh bin/fill-keys.sh  /  ion bin/fill-keys.ion
+mcpctl fill-keys                 # prompts for each key, with echo off
 
-nu bin/fill-keys.nu --yes        # auto-approve all files
-nu bin/fill-keys.nu --help       # options (Nushell/POSIX; Ion: see header)
+CONTEXT7_API_KEY=ctx7sk-... BRAVE_API_KEY=... PERPLEXITY_API_KEY=pplx-... \
+  mcpctl fill-keys --yes         # unattended; any key already exported is used
 ```
 
-Each file is presented with a `[Y/n]` prompt so you control which hosts get their keys
-filled. Omitted keys keep their placeholder, so that server simply stays inert. VS Code
-is excluded from the list — it prompts for the Context7/Brave keys via its own `inputs`
-mechanism.
+A key given on the command line **overrides** whatever is already in the live config, so
+this is also how you rotate one. A key you skip (blank answer, or env var unset) leaves
+the live configs exactly as they are.
+
+It reads `mcp.toml` to learn which server wants which key under which host-specific field
+name, so it can *insert* a key into a host whose config never mentioned it. The previous
+shell scripts substituted the literal string `YOUR_CONTEXT7_API_KEY` and could only fill a
+placeholder that was already sitting in the file.
+
+VS Code is handled but never receives a literal key: it resolves secrets through its own
+`inputs` prompt, and `mcpctl` generates that `inputs` array from `mcp.toml`.
+
+### Legacy shell ports
+
+`bin/fill-keys.{sh,nu,ion}` are kept for machines without a Rust toolchain. They are plain
+string substitution — they replace the placeholder tokens *wherever those tokens already
+appear* in a live config, using [`sd`](https://github.com/chmln/sd) (the `.nu` port uses
+native string operations).
+
+That limits them: `mcpctl deploy` never writes a placeholder into a live config, so after a
+deploy there is generally nothing for them to substitute. Use them only on a config you
+populated by copying a template verbatim. `mcpctl fill-keys` is the supported path.
 
 ## Project Posture
 
