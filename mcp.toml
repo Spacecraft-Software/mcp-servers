@@ -58,7 +58,14 @@ args = []
 name = "context7"
 transport = "http"
 url = "https://mcp.context7.com/mcp"
-headers = { CONTEXT7_API_KEY = "YOUR_CONTEXT7_API_KEY" }
+# `Authorization: Bearer` is the form Context7 documents for every client. The older
+# `CONTEXT7_API_KEY:` header does still authenticate — verified against the live endpoint,
+# where a bad key under that header is rejected with "Invalid API key" rather than being
+# ignored — but it is undocumented upstream and appears only in two third-party clients'
+# setup pages. Since unauthenticated requests also succeed (at a lower rate limit), a
+# header that silently stopped being read would look exactly like one that works, so the
+# documented form is the safer thing to depend on.
+headers = { Authorization = "Bearer YOUR_CONTEXT7_API_KEY" }
 
 # VS Code resolves secrets through a prompted `input`, never a literal placeholder.
 [servers.overrides.VSCode]

@@ -11,7 +11,7 @@
       "type": "remote",
       "url": "https://mcp.context7.com/mcp",
       "headers": {
-        "CONTEXT7_API_KEY": "YOUR_CONTEXT7_API_KEY"
+        "Authorization": "Bearer YOUR_CONTEXT7_API_KEY"
       },
       "enabled": true,
       "timeout": 60000
