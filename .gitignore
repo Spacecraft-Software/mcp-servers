@@ -8,3 +8,8 @@ chat/
 # `nix build` output symlink.
 /result
 
+
+# Agent instruction files — kept local, not committed. SKILL.md stays tracked: it is
+# mcpctl's capability surface, not instructions for an agent working on the repo.
+/CLAUDE.md
+/AGENTS.md
