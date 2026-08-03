@@ -4,6 +4,21 @@
 #
 # fill-keys.ion — Ion (Redox) port of fill-keys.nu.
 #
+# ─────────────────────────────────────────────────────────────────────────────
+#  LEGACY. The supported tool is `mcpctl fill-keys`.
+#
+#  This port is kept for machines without a Rust toolchain. It is a plain string
+#  substitution: it replaces the placeholder tokens wherever they already appear
+#  in a live config. It cannot ADD a key to a host whose config does not already
+#  contain the placeholder, and `mcpctl deploy` deliberately never writes a
+#  placeholder into a live config (a rejected credential is worse than an absent
+#  one). So after a deploy there is usually nothing here to substitute.
+#
+#  Use this only to fill a config you populated by copying a template verbatim.
+#  For every other case:  mcpctl fill-keys
+# ─────────────────────────────────────────────────────────────────────────────
+#
+#
 # Fills the MCP config files' placeholder API-key tokens with real values
 # directly in their live config paths. Each file is presented with a Y/N
 # prompt before modification, so the user controls which hosts get their
@@ -148,33 +163,38 @@ end
 let processed = 0
 let skipped_files = 0
 
-# Relative paths under $HOME for each host (label|relpath)
-for entry in [ \
-    "Antigravity (main)|.gemini/config/mcp_config.json" \
-    "Antigravity (alt)|.gemini/antigravity/mcp_config.json" \
-    "GitHub Copilot CLI|.copilot/mcp-config.json" \
-    "Claude Code|.claude.json" \
-    "OpenClaude|.openclaude.json" \
-    "Codex CLI|.codex/config.toml" \
-    "Grok|.grok/config.toml" \
-    "Kimi Code|.kimi-code/mcp.json" \
-    "Gemini (settings)|.gemini/settings.json" \
-    "Gemini (enablement)|.gemini/mcp-server-enablement.json" \
-    "Qwen Code|.qwen/settings.json" \
-    "OpenCode|.config/opencode/opencode.jsonc" \
-    "Mimo Code|.config/mimocode/mimocode.jsonc" \
-    "Goose|.config/goose/config.yaml" \
+# Relative paths under $HOME for each host.
+#
+# Iterated directly rather than as "label|path" pairs. Splitting those pairs used
+# `sd '|' '\n'`, where `|` is a regex alternation matching at every position: it
+# inserted a newline between every character, so every path came out empty and all
+# 15 files were skipped while the script still printed "Filled 3 of 3 placeholders".
+# Adding `-s` fixes the pattern but then emits a literal backslash-n as the
+# replacement, so the split stays broken either way. Now there is nothing to split.
+for rel in [ \
+    ".gemini/config/mcp_config.json" \
+    ".gemini/antigravity/mcp_config.json" \
+    ".gemini/antigravity-ide/mcp_config.json" \
+    ".copilot/mcp-config.json" \
+    ".claude.json" \
+    ".openclaude.json" \
+    ".codex/config.toml" \
+    ".grok/config.toml" \
+    ".kimi-code/mcp.json" \
+    ".gemini/settings.json" \
+    ".gemini/mcp-server-enablement.json" \
+    ".qwen/settings.json" \
+    ".config/opencode/opencode.jsonc" \
+    ".config/mimocode/mimocode.jsonc" \
+    ".config/goose/config.yaml" \
 ]
-    let parts = $(echo $entry | sd '|' '\n')
-    let label = $(echo $parts | head -n 1)
-    let rel = $(echo $parts | tail -n +2)
     let path = "$HOME/$rel"
     if not test -f "$path"
-        printf 'warning: %s not found at %s — skipping\n' $label $path > /dev/stderr
+        printf 'warning: %s not found — skipping\n' $path > /dev/stderr
         continue
     end
     if test "x$interactive" = "x1"
-        prompt_yn "Fill keys in $label ($path)? [Y/n] "
+        prompt_yn "Fill keys in $path? [Y/n] "
         if test "x$?" = "x1"
             let skipped_files += 1
             continue

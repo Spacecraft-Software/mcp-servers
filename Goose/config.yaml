@@ -17,7 +17,7 @@ extensions:
     type: streamable_http
     uri: https://mcp.context7.com/mcp
     headers:
-      CONTEXT7_API_KEY: YOUR_CONTEXT7_API_KEY
+      Authorization: Bearer YOUR_CONTEXT7_API_KEY
     enabled: true
     timeout: 300
   microsoft-learn:
@@ -104,6 +104,10 @@ extensions:
     name: crates
     type: stdio
     cmd: crates-mcp
+    envs:
+      RUST_LOG: error
+      NO_COLOR: "1"
+      TERM: dumb
     enabled: true
     timeout: 300
   bravais-cli:
@@ -114,4 +118,3 @@ extensions:
       - mcp
     enabled: true
     timeout: 300
-

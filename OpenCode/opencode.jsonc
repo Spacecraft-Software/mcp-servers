@@ -11,7 +11,7 @@
       "type": "remote",
       "url": "https://mcp.context7.com/mcp",
       "headers": {
-        "CONTEXT7_API_KEY": "YOUR_CONTEXT7_API_KEY"
+        "Authorization": "Bearer YOUR_CONTEXT7_API_KEY"
       },
       "enabled": true,
       "timeout": 60000
@@ -37,7 +37,8 @@
     "engram": {
       "type": "local",
       "command": ["engram", "--db", "/home/mj/.gemini/engram.db", "mcp"],
-      "enabled": true
+      "enabled": true,
+      "timeout": 60000
     },
     "brave-search": {
       "type": "local",
@@ -77,13 +78,19 @@
     "crates": {
       "type": "local",
       "command": ["crates-mcp"],
-      "enabled": true
+      "environment": {
+        "RUST_LOG": "error",
+        "NO_COLOR": "1",
+        "TERM": "dumb"
+      },
+      "enabled": true,
+      "timeout": 60000
     },
     "bravais-cli": {
       "type": "local",
       "command": ["bravais-cli", "mcp"],
-      "enabled": true
+      "enabled": true,
+      "timeout": 60000
     }
   }
 }
-

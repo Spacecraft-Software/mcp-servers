@@ -1,0 +1,115 @@
+# SPDX-FileCopyrightText: 2026 Mohamed Hammad <Mohamed.Hammad@SpacecraftSoftware.org>
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "mcpctl"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "GPL-3.0-or-later"
+description = "Manifest-driven generation and deployment of MCP server configs across host applications"
+repository = "https://github.com/Spacecraft-Software/mcp-servers"
+publish = false
+
+[lib]
+name = "mcpctl"
+path = "src/lib.rs"
+
+[[bin]]
+name = "mcpctl"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+# Standard §12.5 mandates jiff or chrono for time; used for the UTC backup stamp.
+jiff = "0.2"
+# Echo-free key entry, matching what the shell ports did with `stty -echo`.
+rpassword = "7"
+# Ordered maps so `env` and `headers` keep the order the manifest writes them in.
+indexmap = { version = "2", features = ["serde"] }
+# `preserve_order` keeps host config key order stable so deploy produces minimal diffs.
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+# Format-preserving TOML, so splicing `[mcp_servers.*]` leaves the rest of
+# ~/.codex/config.toml byte-identical.
+toml_edit = "0.25"
+# Real JSONC parsing: the live VS Code config carries trailing commas.
+jsonc-parser = { version = "0.33", features = ["serde"] }
+# Reading TOML into the common `serde_json::Value` currency; `toml_edit` above is
+# used for writing, where formatting must survive. `preserve_order` is required, not
+# cosmetic: without it the manifest's `env = { RUST_LOG, NO_COLOR, TERM }` is
+# alphabetized on the way in and every template's env block silently reorders.
+toml = { version = "0.9", features = ["preserve_order"] }
+# The YAML organization's maintained successor to the deprecated `serde_yaml`.
+yaml_serde = "0.10"
+
+[profile.release]
+# Standard §3.2: record every applied and every disabled flag with its reason.
+#   APPLIED  lto / codegen-units=1 — whole-program optimization; build is small
+#            enough that the extra link time is not felt.
+#   DISABLED target-cpu=native — belongs in RUSTFLAGS, not here, and would make
+#            release artifacts non-portable across machines. Stability (Priority 1)
+#            outranks the marginal gain on a config tool that is I/O-bound anyway.
+#   DISABLED PGO — no representative workload to profile; the process is dominated
+#            by file reads, not compute.
+#   DISABLED mimalloc (M-MIMALLOC-APPS) — deliberately skipped. It adds a native C
+#            build dependency that is a known source of breakage under Nix, and this
+#            binary parses ~16 small files then exits, so allocator throughput is
+#            not on any hot path. Stability over an unmeasurable gain.
+lto = true
+codegen-units = 1
+
+[lints.rust]
+ambiguous_negative_literals = "warn"
+missing_debug_implementations = "warn"
+redundant_imports = "warn"
+redundant_lifetimes = "warn"
+trivial_numeric_casts = "warn"
+unsafe_op_in_unsafe_fn = "warn"
+unused_lifetimes = "warn"
+
+[lints.clippy]
+cargo = { level = "warn", priority = -1 }
+complexity = { level = "warn", priority = -1 }
+correctness = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+perf = { level = "warn", priority = -1 }
+style = { level = "warn", priority = -1 }
+suspicious = { level = "warn", priority = -1 }
+
+allow_attributes_without_reason = "warn"
+assertions_on_result_states = "warn"
+clone_on_ref_ptr = "warn"
+deref_by_slicing = "warn"
+empty_drop = "warn"
+empty_enum_variants_with_brackets = "warn"
+empty_structs_with_brackets = "warn"
+if_then_some_else_none = "warn"
+map_err_ignore = "warn"
+redundant_type_annotations = "warn"
+renamed_function_params = "warn"
+semicolon_outside_block = "warn"
+undocumented_unsafe_blocks = "warn"
+unnecessary_safety_comment = "warn"
+unnecessary_safety_doc = "warn"
+unneeded_field_pattern = "warn"
+unused_result_ok = "warn"
+
+# May cause issues with structured logging otherwise.
+literal_string_with_formatting_args = "allow"
+
+# `publish = false` makes crates.io metadata lints noise for this workspace-internal tool.
+cargo_common_metadata = "allow"
+
+# Duplicate transitive versions (`toml_datetime`, `winnow`) come from the toml/toml_edit
+# split and are not resolvable from here. Nothing to act on, so do not spend a warning.
+multiple_crate_versions = "allow"
+
+# This crate is an application (M-APP-ERROR), not a published library. The `lib` target
+# exists only so the integration tests can reach the modules; nothing outside this
+# repository links against it. Library-API ceremony on that surface is noise, and the
+# error paths are already described by `anyhow` context at the point they are produced.
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+must_use_candidate = "allow"

@@ -1,2 +1,15 @@
-# Key-filled configs produced by bin/fill-keys.nu — never commit real secrets.
+# Key-filled configs produced by the fill-keys tooling — never commit real secrets.
 /dist/
+chat/
+
+# Rust build artifacts. Cargo.lock IS tracked: mcpctl ships as a binary.
+/mcpctl/target/
+
+# `nix build` output symlink.
+/result
+
+
+# Agent instruction files — kept local, not committed. SKILL.md stays tracked: it is
+# mcpctl's capability surface, not instructions for an agent working on the repo.
+/CLAUDE.md
+/AGENTS.md

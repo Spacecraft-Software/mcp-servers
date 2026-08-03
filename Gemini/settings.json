@@ -6,15 +6,15 @@
       "args": ["run", "github:utensils/mcp-nixos", "--"]
     },
     "context7": {
-      "url": "https://mcp.context7.com/mcp",
       "type": "http",
+      "url": "https://mcp.context7.com/mcp",
       "headers": {
-        "CONTEXT7_API_KEY": "YOUR_CONTEXT7_API_KEY"
+        "Authorization": "Bearer YOUR_CONTEXT7_API_KEY"
       }
     },
     "microsoft-learn": {
-      "url": "https://learn.microsoft.com/api/mcp",
-      "type": "http"
+      "type": "http",
+      "url": "https://learn.microsoft.com/api/mcp"
     },
     "filesystem": {
       "command": "npx",
@@ -56,7 +56,12 @@
       }
     },
     "crates": {
-      "command": "crates-mcp"
+      "command": "crates-mcp",
+      "env": {
+        "RUST_LOG": "error",
+        "NO_COLOR": "1",
+        "TERM": "dumb"
+      }
     },
     "bravais-cli": {
       "command": "bravais-cli",
@@ -64,4 +69,3 @@
     }
   }
 }
-

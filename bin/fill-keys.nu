@@ -3,6 +3,21 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # fill-keys.nu — fill the MCP config files' placeholder API-key tokens with
+#
+# ─────────────────────────────────────────────────────────────────────────────
+#  LEGACY. The supported tool is `mcpctl fill-keys`.
+#
+#  This port is kept for machines without a Rust toolchain. It is a plain string
+#  substitution: it replaces the placeholder tokens wherever they already appear
+#  in a live config. It cannot ADD a key to a host whose config does not already
+#  contain the placeholder, and `mcpctl deploy` deliberately never writes a
+#  placeholder into a live config (a rejected credential is worse than an absent
+#  one). So after a deploy there is usually nothing here to substitute.
+#
+#  Use this only to fill a config you populated by copying a template verbatim.
+#  For every other case:  mcpctl fill-keys
+# ─────────────────────────────────────────────────────────────────────────────
+#
 # real values directly in their live config paths. Each file is presented with
 # a Y/N prompt before modification, so the user controls which hosts get their
 # keys filled. Supports unattended (--yes) mode for CI.
@@ -31,6 +46,7 @@ const LIVE_CONFIG_RELS = [
     [label                          rel];
     ["Antigravity (main)"           ".gemini/config/mcp_config.json"                ]
     ["Antigravity (alt)"            ".gemini/antigravity/mcp_config.json"           ]
+    ["Antigravity (IDE)"            ".gemini/antigravity-ide/mcp_config.json"       ]
     ["GitHub Copilot CLI"           ".copilot/mcp-config.json"                      ]
     ["Claude Code"                  ".claude.json"                                  ]
     ["OpenClaude"                   ".openclaude.json"                               ]

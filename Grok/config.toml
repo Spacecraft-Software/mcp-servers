@@ -12,7 +12,7 @@ url = "https://mcp.context7.com/mcp"
 enabled = true
 
 [mcp_servers.context7.headers]
-CONTEXT7_API_KEY = "YOUR_CONTEXT7_API_KEY"
+Authorization = "Bearer YOUR_CONTEXT7_API_KEY"
 
 [mcp_servers.microsoft-learn]
 url = "https://learn.microsoft.com/api/mcp"
@@ -67,6 +67,11 @@ TERM = "dumb"
 [mcp_servers.crates]
 command = "crates-mcp"
 enabled = true
+
+[mcp_servers.crates.env]
+RUST_LOG = "error"
+NO_COLOR = "1"
+TERM = "dumb"
 
 [mcp_servers.bravais-cli]
 command = "bravais-cli"

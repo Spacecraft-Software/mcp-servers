@@ -1,12 +1,14 @@
 {
   "mcpServers": {
     "nixos": {
-      "command": "mcp-nixos"
+      "command": "nix",
+      "args": ["run", "github:utensils/mcp-nixos", "--"],
+      "disabled": false
     },
     "context7": {
       "serverUrl": "https://mcp.context7.com/mcp",
       "headers": {
-        "CONTEXT7_API_KEY": "YOUR_CONTEXT7_API_KEY"
+        "Authorization": "Bearer YOUR_CONTEXT7_API_KEY"
       },
       "disabled": false
     },
@@ -14,16 +16,16 @@
       "serverUrl": "https://learn.microsoft.com/api/mcp",
       "disabled": false
     },
-
     "filesystem": {
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/spacecraft-software"]
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/spacecraft-software"],
+      "disabled": false
     },
     "fetch": {
       "command": "uvx",
-      "args": ["--with", "mcp<2", "mcp-server-fetch"]
+      "args": ["--with", "mcp<2", "mcp-server-fetch"],
+      "disabled": false
     },
-
     "engram": {
       "command": "engram",
       "args": ["--db", "/home/mj/.gemini/engram.db", "mcp"],
@@ -57,15 +59,22 @@
         "RUST_LOG": "error",
         "NO_COLOR": "1",
         "TERM": "dumb"
-      }
+      },
+      "disabled": false
     },
     "crates": {
-      "command": "crates-mcp"
+      "command": "crates-mcp",
+      "env": {
+        "RUST_LOG": "error",
+        "NO_COLOR": "1",
+        "TERM": "dumb"
+      },
+      "disabled": false
     },
     "bravais-cli": {
       "command": "bravais-cli",
-      "args": ["mcp"]
+      "args": ["mcp"],
+      "disabled": false
     }
   }
 }
-
