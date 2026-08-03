@@ -58,7 +58,33 @@ mcpctl deploy --yes            # apply it
 mcpctl fill-keys               # put real API keys into the live configs
 ```
 
-Add `--json` to any command for machine-readable output.
+Two commands answer "what can this do" without needing a repository, which is where an
+agent should start:
+
+```sh
+mcpctl describe --json   # how this invocation resolved: format, color, interactivity
+mcpctl schema --json     # every command as JSON Schema Draft 2020-12
+mcpctl schema --format openai   # also: anthropic, gemini, mcp
+```
+
+`--json` on any command gives a `{metadata, data}` envelope. Errors give
+`{metadata, error{code, exit_code, message, hint}}`, where `hint` is a **runnable
+command** rather than a sentence about one:
+
+```json
+{"error":{"code":"NOT_FOUND","exit_code":3,
+          "message":"`/nonexistent` is not readable: No such file or directory",
+          "hint":"mcpctl check --repo ."}}
+```
+
+Exit codes are stable: `0` ok, `1` bad repository or config state, `2` bad invocation,
+`3` not found, `4` refused for safety.
+
+JSON is selected automatically when `AI_AGENT`, `AGENT`, or a truthy `CI` is present —
+detected by **presence**, since real harnesses export descriptive values rather than `1`.
+Under an agent the output is also compact rather than pretty-printed, and color is off.
+`CLAUDECODE`, `CURSOR_AGENT`, and `GEMINI_CLI` are reported in `metadata.invoking_agent`
+but never change behavior on their own.
 
 **Changing a server is now one edit.** Edit `mcp.toml`, run `mcpctl render` to update all
 13 templates, then `mcpctl deploy` to push it to the hosts, then restart the hosts. The
@@ -144,6 +170,15 @@ native string operations).
 That limits them: `mcpctl deploy` never writes a placeholder into a live config, so after a
 deploy there is generally nothing for them to substitute. Use them only on a config you
 populated by copying a template verbatim. `mcpctl fill-keys` is the supported path.
+
+## Files for agents
+
+| File | Reader |
+|---|---|
+| `AGENTS.md` | Generic agents — repository invariants, build/test commands, what not to edit |
+| `CLAUDE.md` | Claude Code — the same, plus the reasoning behind each safety property |
+| `SKILL.md` | Skill loaders — `mcpctl`'s capability surface |
+| `CONTRIBUTING.md` | Human contributors |
 
 ## Project Posture
 
