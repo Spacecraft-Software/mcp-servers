@@ -33,13 +33,27 @@
         };
       });
 
-      packages = forAll (pkgs: {
-        default = pkgs.rustPlatform.buildRustPackage {
-          pname = "mcpctl";
-          version = "0.1.0";
-          src = ./mcpctl;
-          cargoLock.lockFile = ./mcpctl/Cargo.lock;
-        };
-      });
+      packages = forAll (pkgs:
+        let
+          mcpctl = pkgs.rustPlatform.buildRustPackage {
+            pname = "mcpctl";
+            version = "0.1.0";
+
+            # The whole repository, not just ./mcpctl: the round-trip tests in
+            # mcpctl/tests/render.rs resolve CARGO_MANIFEST_DIR/.. and load the real
+            # `mcp.toml` and the real templates. Vendoring only the crate makes
+            # `cargo test` fail in the check phase with "cannot read /build/mcp.toml".
+            src = ./.;
+            cargoRoot = "mcpctl"; # where Cargo.lock lives
+            buildAndTestSubdir = "mcpctl"; # where cargo build/test run
+
+            cargoLock.lockFile = ./mcpctl/Cargo.lock;
+          };
+        in
+        {
+          inherit mcpctl;
+          # `nix profile add .#mcpctl` should work as well as `.#default`.
+          default = mcpctl;
+        });
     };
 }
