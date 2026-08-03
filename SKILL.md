@@ -68,3 +68,16 @@ process is running, and defaults to `--dry-run` with no terminal or under an age
 
 A Rust toolchain (`nix develop` provides one) and, for `deploy`/`fill-keys`, the host
 config files themselves. No network access is needed.
+
+To put `mcpctl` on `PATH` rather than running it out of `target/`:
+
+```sh
+nix profile add /spacecraft-software/mcp-servers#mcpctl
+```
+
+The install is pinned at that moment — re-run it after changing `mcpctl/` or `mcp.toml`,
+and prefer `cargo build --release` while iterating.
+
+Running `deploy` from inside an agent session reports rather than writes: it is a dry run
+under `CLAUDECODE`/`CI`, and a host whose process is running is refused outright. Writing
+to a live config is a human action from a plain shell.
