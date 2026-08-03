@@ -18,7 +18,6 @@
 //! mentioned it, which the string-substituting version could not do.
 
 use std::collections::BTreeMap;
-use std::io::IsTerminal;
 use std::path::Path;
 
 use anyhow::{Context, Result};
@@ -26,17 +25,27 @@ use serde_json::json;
 
 use crate::dialect::{HOSTS, Host, Strictness};
 use crate::manifest::Manifest;
+use crate::runtime::{ExitCode, Failure, Profile};
 use crate::{deploy, dialect, render, splice};
 
 /// Fills every known secret into every live config that wants one.
-pub fn run(repo: &Path, yes: bool, as_json: bool) -> Result<()> {
+pub fn run(repo: &Path, yes: bool, profile: &Profile) -> Result<ExitCode, Failure> {
+    fill(repo, yes, profile).map_err(|error| {
+        Failure::new(
+            "FILL_KEYS_FAILED",
+            ExitCode::Failed,
+            format!("{error:#}"),
+            "mcpctl deploy --dry-run --json",
+        )
+    })
+}
+
+/// Collects key values and writes them into every live config that wants one.
+fn fill(repo: &Path, yes: bool, profile: &Profile) -> Result<ExitCode> {
     let manifest = Manifest::load(repo)?;
     let home = deploy::home_dir()?;
 
-    let interactive = !yes
-        && std::io::stdin().is_terminal()
-        && std::env::var_os("CI").is_none()
-        && std::env::var_os("CLAUDECODE").is_none();
+    let interactive = profile.interactive && !yes;
 
     // Environment first, then a hidden prompt. A blank answer skips that key, leaving
     // whatever the live configs already hold untouched.
@@ -58,10 +67,10 @@ pub fn run(repo: &Path, yes: bool, as_json: bool) -> Result<()> {
     }
 
     if values.is_empty() {
-        if as_json {
-            println!(
-                "{}",
-                json!({ "filled": 0, "reason": "no key values supplied" })
+        if profile.json {
+            profile.emit(
+                "mcpctl fill-keys",
+                &json!({ "filled": 0, "reason": "no key values supplied" }),
             );
         } else {
             println!(
@@ -74,7 +83,7 @@ pub fn run(repo: &Path, yes: bool, as_json: bool) -> Result<()> {
                     .join(", ")
             );
         }
-        return Ok(());
+        return Ok(ExitCode::Ok);
     }
 
     let mut touched: Vec<String> = Vec::new();
@@ -92,13 +101,13 @@ pub fn run(repo: &Path, yes: bool, as_json: bool) -> Result<()> {
         }
     }
 
-    if as_json {
-        println!(
-            "{}",
-            serde_json::to_string_pretty(&json!({
+    if profile.json {
+        profile.emit(
+            "mcpctl fill-keys",
+            &json!({
                 "keys": values.keys().collect::<Vec<_>>(),
                 "files": touched,
-            }))?
+            }),
         );
     } else {
         println!(
@@ -113,7 +122,7 @@ pub fn run(repo: &Path, yes: bool, as_json: bool) -> Result<()> {
             println!("Restart every host for the new keys to take effect.");
         }
     }
-    Ok(())
+    Ok(ExitCode::Ok)
 }
 
 /// Fills secrets into one live config, returning whether anything changed.

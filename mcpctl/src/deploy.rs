@@ -20,7 +20,7 @@
 //!    and the write itself is a rename over a fully written temporary.
 
 use std::collections::BTreeMap;
-use std::io::{IsTerminal, Write};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
@@ -28,6 +28,7 @@ use serde_json::{Map, Value, json};
 
 use crate::dialect::{Format, HOSTS, Host, Strictness};
 use crate::manifest::{HostConfig, Manifest};
+use crate::runtime::{ExitCode, Failure, Profile};
 use crate::{dialect, emit, render, splice};
 
 /// What deploying one file would do.
@@ -61,10 +62,6 @@ struct Change {
 
 /// How a deploy should behave.
 #[derive(Debug, Clone, Copy, Default)]
-#[expect(
-    clippy::struct_excessive_bools,
-    reason = "these mirror independent command-line flags, so they are not a state enum"
-)]
 pub struct Options {
     /// Report what would change without writing anything.
     pub dry_run: bool,
@@ -72,8 +69,6 @@ pub struct Options {
     pub yes: bool,
     /// Deploy even while a host that owns its config is running.
     pub force: bool,
-    /// Emit machine-readable JSON.
-    pub as_json: bool,
 }
 
 /// Everything the planning pass discovered.
@@ -88,35 +83,54 @@ struct Survey {
 }
 
 /// Deploys the manifest into every live config.
-pub fn run(repo: &Path, options: Options, host_filter: Option<&str>) -> Result<()> {
+pub fn run(
+    repo: &Path,
+    options: Options,
+    host_filter: Option<&str>,
+    profile: &Profile,
+) -> Result<ExitCode, Failure> {
+    execute(repo, options, host_filter, profile).map_err(|error| {
+        Failure::new(
+            "DEPLOY_FAILED",
+            ExitCode::Failed,
+            format!("{error:#}"),
+            "mcpctl deploy --dry-run --json",
+        )
+    })
+}
+
+/// Plans and applies the deploy.
+fn execute(
+    repo: &Path,
+    options: Options,
+    host_filter: Option<&str>,
+    profile: &Profile,
+) -> Result<ExitCode> {
     let manifest = Manifest::load(repo)?;
     let home = home_dir()?;
 
     // Writing is opt-in. Without a terminal to confirm at, and without an explicit
     // --yes, the only safe reading of the request is "show me what you would do" — this
     // is what keeps an agent-driven or CI run from rewriting a developer's configs.
-    let interactive = !options.yes
-        && std::io::stdin().is_terminal()
-        && std::env::var_os("CI").is_none()
-        && std::env::var_os("CLAUDECODE").is_none();
+    let interactive = profile.interactive;
     let dry_run = options.dry_run || (!options.yes && !interactive);
 
     let survey = survey(&manifest, &home, host_filter, options.force)?;
-    report(&survey, dry_run, options.as_json)?;
+    report(&survey, dry_run, profile);
 
     if dry_run {
-        if !options.as_json {
+        if !profile.json {
             println!("\nnothing written (dry run). Re-run with --yes from a terminal to apply.");
         }
-        return Ok(());
+        return Ok(ExitCode::Ok);
     }
 
     let written = apply(&survey.changes, &home, interactive)?;
-    if !options.as_json {
+    if !profile.json {
         println!("\n{written} file(s) written");
         println!("Restart every host — a failed MCP server is not retried in-process.");
     }
-    Ok(())
+    Ok(ExitCode::Ok)
 }
 
 /// Works out what deploying would do, without touching anything.
@@ -597,13 +611,13 @@ fn confirm(prompt: &str, default_yes: bool) -> Result<bool> {
 }
 
 /// Prints what deploying would do.
-fn report(survey: &Survey, dry_run: bool, as_json: bool) -> Result<()> {
+fn report(survey: &Survey, dry_run: bool, profile: &Profile) {
     let Survey {
         changes,
         skipped,
         blocked,
     } = survey;
-    if as_json {
+    if profile.json {
         let report = json!({
             "dry_run": dry_run,
             "files": changes.iter().map(|change| json!({
@@ -619,8 +633,8 @@ fn report(survey: &Survey, dry_run: bool, as_json: bool) -> Result<()> {
             "skipped": skipped,
             "blocked": blocked,
         });
-        println!("{}", serde_json::to_string_pretty(&report)?);
-        return Ok(());
+        profile.emit("mcpctl deploy", &report);
+        return;
     }
 
     let dirty = changes.iter().filter(|change| change.dirty).count();
@@ -669,7 +683,6 @@ fn report(survey: &Survey, dry_run: bool, as_json: bool) -> Result<()> {
             println!("  {entry}");
         }
     }
-    Ok(())
 }
 
 /// Whether a value still carries an unfilled placeholder token anywhere inside it.

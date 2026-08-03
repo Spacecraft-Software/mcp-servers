@@ -59,3 +59,10 @@ jobs:
       # by the next `mcpctl render`.
       - name: Check templates match the manifest
         run: ./mcpctl/target/release/mcpctl render --check
+
+      # Standard §3.3 — dependency auditing. Advisory data changes without any commit
+      # here, so this runs on every build rather than only when Cargo.toml moves.
+      - name: Audit dependencies
+        run: |
+          cargo install cargo-audit --locked
+          cargo audit --file mcpctl/Cargo.lock

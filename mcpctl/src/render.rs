@@ -16,6 +16,7 @@ use serde_json::{Map, Value, json};
 use crate::dialect::{CommandShape, EnabledStyle, Format, HOSTS, Host};
 use crate::emit;
 use crate::manifest::{Manifest, OrderedMap, Resolved, TransportKind};
+use crate::runtime::{ExitCode, Failure, Profile};
 
 /// One generated file and its intended location.
 #[derive(Debug)]
@@ -27,7 +28,19 @@ pub struct Output {
 }
 
 /// Generates every template, writing them unless `check_only`.
-pub fn run(repo: &Path, check_only: bool, as_json: bool) -> Result<()> {
+pub fn run(repo: &Path, check_only: bool, profile: &Profile) -> Result<ExitCode, Failure> {
+    generate_and_write(repo, check_only, profile).map_err(|error| {
+        Failure::new(
+            "RENDER_FAILED",
+            ExitCode::Failed,
+            format!("{error:#}"),
+            "mcpctl check --json",
+        )
+    })
+}
+
+/// Generates every output file and writes or diffs it.
+fn generate_and_write(repo: &Path, check_only: bool, profile: &Profile) -> Result<ExitCode> {
     let manifest = Manifest::load(repo)?;
     let outputs = generate(&manifest)?;
 
@@ -54,14 +67,14 @@ pub fn run(repo: &Path, check_only: bool, as_json: bool) -> Result<()> {
         }
     }
 
-    if as_json {
+    if profile.json {
         let report = json!({
             "ok": differing.is_empty(),
             "generated": outputs.len(),
             "differing": differing,
             "written": written,
         });
-        println!("{}", serde_json::to_string_pretty(&report)?);
+        profile.emit("mcpctl render", &report);
     } else if check_only {
         if differing.is_empty() {
             println!(
@@ -88,10 +101,11 @@ pub fn run(repo: &Path, check_only: bool, as_json: bool) -> Result<()> {
         }
     }
 
-    if check_only && !differing.is_empty() {
-        std::process::exit(1);
-    }
-    Ok(())
+    Ok(if check_only && !differing.is_empty() {
+        ExitCode::Failed
+    } else {
+        ExitCode::Ok
+    })
 }
 
 /// Builds every output file from the manifest.

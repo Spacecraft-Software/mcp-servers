@@ -18,8 +18,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
-use anyhow::Result;
 use serde_json::json;
+
+use crate::runtime::{ExitCode, Failure, Profile};
 
 use crate::dialect::{self, HOSTS, Strictness, Transport};
 
@@ -80,7 +81,14 @@ type Variants = Vec<(Transport, Vec<String>)>;
 type Drift = Vec<(String, Variants)>;
 
 /// Runs the parity check over every tracked template.
-pub fn run(repo: &Path, json: bool) -> Result<()> {
+pub fn run(repo: &Path, profile: &Profile) -> Result<ExitCode, Failure> {
+    // A malformed or unreadable template is a finding, not a crash: `inspect` collects
+    // them into the report so one bad file does not hide the state of the other twelve.
+    Ok(inspect(repo, profile))
+}
+
+/// Parses every template and reports how they disagree.
+fn inspect(repo: &Path, profile: &Profile) -> ExitCode {
     let mut parsed: BTreeMap<&str, dialect::Servers> = BTreeMap::new();
     let mut parse_failures: Vec<(String, String)> = Vec::new();
 
@@ -149,7 +157,7 @@ pub fn run(repo: &Path, json: bool) -> Result<()> {
 
     let ok = parse_failures.is_empty() && missing.is_empty() && drift.is_empty();
 
-    if json {
+    if profile.json {
         let report = json!({
             "ok": ok,
             "templates_checked": HOSTS.len(),
@@ -177,16 +185,12 @@ pub fn run(repo: &Path, json: bool) -> Result<()> {
                 }))
                 .collect::<Vec<_>>(),
         });
-        println!("{}", serde_json::to_string_pretty(&report)?);
+        profile.emit("mcpctl check", &report);
     } else {
         print_report(&parsed, &union, &parse_failures, &missing, &drift);
     }
 
-    if ok {
-        Ok(())
-    } else {
-        std::process::exit(1);
-    }
+    if ok { ExitCode::Ok } else { ExitCode::Failed }
 }
 
 /// Renders the human-readable report.
