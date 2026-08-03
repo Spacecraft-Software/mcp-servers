@@ -1,7 +1,8 @@
 {
   "mcpServers": {
     "nixos": {
-      "command": "mcp-nixos",
+      "command": "nix",
+      "args": ["run", "github:utensils/mcp-nixos", "--"],
       "disabled": false
     },
     "context7": {
@@ -63,6 +64,11 @@
     },
     "crates": {
       "command": "crates-mcp",
+      "env": {
+        "RUST_LOG": "error",
+        "NO_COLOR": "1",
+        "TERM": "dumb"
+      },
       "disabled": false
     },
     "bravais-cli": {

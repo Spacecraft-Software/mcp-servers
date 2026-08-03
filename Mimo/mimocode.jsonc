@@ -78,6 +78,11 @@
     "crates": {
       "type": "local",
       "command": ["crates-mcp"],
+      "environment": {
+        "RUST_LOG": "error",
+        "NO_COLOR": "1",
+        "TERM": "dumb"
+      },
       "enabled": true,
       "timeout": 60000
     },

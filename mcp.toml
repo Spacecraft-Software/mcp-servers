@@ -48,11 +48,11 @@ name = "nixos"
 transport = "stdio"
 command = "nix"
 args = ["run", "github:utensils/mcp-nixos", "--"]
-
-# Antigravity resolves the binary itself rather than going through `nix run`.
-[servers.overrides.Antigravity]
-command = "mcp-nixos"
-args = []
+# There is no `mcp-nixos` binary on this machine — it is only ever reached through
+# `nix run`. An Antigravity override that called it directly shipped in the first
+# manifest and Antigravity answered with
+# `exec: "mcp-nixos": executable file not found in $PATH`. Do not reintroduce it
+# without first checking `command -v mcp-nixos`.
 
 [[servers]]
 name = "context7"
@@ -141,6 +141,13 @@ env = { RUST_LOG = "error", NO_COLOR = "1", TERM = "dumb" }
 name = "crates"
 transport = "stdio"
 command = "crates-mcp"
+# Load-bearing, exactly as for `terminal`. crates-mcp writes its `tracing` output to
+# **stdout**, not stderr, and colours it — so the first bytes a host reads are
+# `\x1b[2m2026-…  WARN crates_mcp::crates_client: …` rather than JSON-RPC. Claude Code
+# skips lines it cannot parse and works anyway; Antigravity's Go client hard-fails with
+# `calling "initialize": invalid character '\x1b' looking for beginning of value`.
+# RUST_LOG=error silences the WARN/INFO pair, leaving the stream clean.
+env = { RUST_LOG = "error", NO_COLOR = "1", TERM = "dumb" }
 
 [[servers]]
 name = "bravais-cli"

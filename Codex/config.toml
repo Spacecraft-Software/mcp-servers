@@ -58,6 +58,11 @@ TERM = "dumb"
 [mcp_servers.crates]
 command = "crates-mcp"
 
+[mcp_servers.crates.env]
+RUST_LOG = "error"
+NO_COLOR = "1"
+TERM = "dumb"
+
 [mcp_servers.bravais-cli]
 command = "bravais-cli"
 args = ["mcp"]

@@ -104,6 +104,10 @@ extensions:
     name: crates
     type: stdio
     cmd: crates-mcp
+    envs:
+      RUST_LOG: error
+      NO_COLOR: "1"
+      TERM: dumb
     enabled: true
     timeout: 300
   bravais-cli:

@@ -63,7 +63,12 @@
   },
   "crates": {
     "type": "stdio",
-    "command": "crates-mcp"
+    "command": "crates-mcp",
+    "env": {
+      "RUST_LOG": "error",
+      "NO_COLOR": "1",
+      "TERM": "dumb"
+    }
   },
   "bravais-cli": {
     "type": "stdio",
