@@ -4,6 +4,21 @@
 #
 # fill-keys.sh — POSIX (Bash / Brush / dash / ash) port of fill-keys.nu.
 #
+# ─────────────────────────────────────────────────────────────────────────────
+#  LEGACY. The supported tool is `mcpctl fill-keys`.
+#
+#  This port is kept for machines without a Rust toolchain. It is a plain string
+#  substitution: it replaces the placeholder tokens wherever they already appear
+#  in a live config. It cannot ADD a key to a host whose config does not already
+#  contain the placeholder, and `mcpctl deploy` deliberately never writes a
+#  placeholder into a live config (a rejected credential is worse than an absent
+#  one). So after a deploy there is usually nothing here to substitute.
+#
+#  Use this only to fill a config you populated by copying a template verbatim.
+#  For every other case:  mcpctl fill-keys
+# ─────────────────────────────────────────────────────────────────────────────
+#
+#
 # Fills the MCP config files' placeholder API-key tokens with real values
 # directly in their live config paths. Each file is presented with a Y/N
 # prompt before modification, so the user controls which hosts get their
@@ -121,6 +136,7 @@ while IFS='|' read -r label path; do
 done <<'EOF'
 Antigravity (main)|${HOME}/.gemini/config/mcp_config.json
 Antigravity (alt)|${HOME}/.gemini/antigravity/mcp_config.json
+Antigravity (IDE)|${HOME}/.gemini/antigravity-ide/mcp_config.json
 GitHub Copilot CLI|${HOME}/.copilot/mcp-config.json
 Claude Code|${HOME}/.claude.json
 OpenClaude|${HOME}/.openclaude.json

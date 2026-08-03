@@ -11,21 +11,51 @@ permissions:
   contents: read
 
 jobs:
-  lint:
-    name: REUSE + config validation
+  reuse:
+    name: REUSE compliance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install reuse
+      - run: reuse lint
+
+  mcpctl:
+    name: mcpctl — build, lint, test, template parity
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          python-version: "3.12"
+          components: clippy, rustfmt
 
-      - name: Install tools
-        run: pip install reuse pyyaml
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: mcpctl
 
-      - name: REUSE lint
-        run: reuse lint
+      - name: Format
+        run: cargo fmt --manifest-path mcpctl/Cargo.toml --check
 
-      - name: Validate JSON / JSONC / TOML / YAML
-        run: python3 .github/validate-configs.py
+      - name: Clippy
+        run: cargo clippy --manifest-path mcpctl/Cargo.toml --all-targets -- -D warnings
+
+      - name: Test
+        run: cargo test --manifest-path mcpctl/Cargo.toml
+
+      - name: Build
+        run: cargo build --manifest-path mcpctl/Cargo.toml --release
+
+      # Every config file parses, every host declares the same servers, and no host
+      # disagrees about how to invoke one. This replaces the former
+      # `.github/validate-configs.py`, which only checked that files parsed.
+      - name: Check template parity
+        run: ./mcpctl/target/release/mcpctl check
+
+      # The templates are generated. If they differ from what `mcp.toml` produces,
+      # someone edited a template by hand and their change would be silently reverted
+      # by the next `mcpctl render`.
+      - name: Check templates match the manifest
+        run: ./mcpctl/target/release/mcpctl render --check
