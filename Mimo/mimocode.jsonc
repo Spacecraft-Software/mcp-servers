@@ -37,7 +37,8 @@
     "engram": {
       "type": "local",
       "command": ["engram", "--db", "/home/mj/.gemini/engram.db", "mcp"],
-      "enabled": true
+      "enabled": true,
+      "timeout": 60000
     },
     "brave-search": {
       "type": "local",
@@ -54,6 +55,15 @@
       "enabled": true,
       "timeout": 60000
     },
+    "perplexity": {
+      "type": "local",
+      "command": ["npx", "-y", "perplexity-mcp"],
+      "environment": {
+        "PERPLEXITY_API_KEY": "YOUR_PERPLEXITY_API_KEY"
+      },
+      "enabled": true,
+      "timeout": 60000
+    },
     "terminal": {
       "type": "local",
       "command": ["npx", "-y", "mcp-server-terminal"],
@@ -65,24 +75,17 @@
       "enabled": true,
       "timeout": 60000
     },
-    "perplexity": {
-      "type": "local",
-      "command": ["npx", "-y", "perplexity-mcp"],
-      "environment": {
-        "PERPLEXITY_API_KEY": "YOUR_PERPLEXITY_API_KEY"
-      },
-      "enabled": true,
-      "timeout": 60000
-    },
     "crates": {
       "type": "local",
       "command": ["crates-mcp"],
-      "enabled": true
+      "enabled": true,
+      "timeout": 60000
     },
     "bravais-cli": {
       "type": "local",
       "command": ["bravais-cli", "mcp"],
-      "enabled": true
+      "enabled": true,
+      "timeout": 60000
     }
   }
 }

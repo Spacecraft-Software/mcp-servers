@@ -37,7 +37,8 @@
     "engram": {
       "type": "local",
       "command": ["engram", "--db", "/home/mj/.gemini/engram.db", "mcp"],
-      "enabled": true
+      "enabled": true,
+      "timeout": 60000
     },
     "brave-search": {
       "type": "local",
@@ -77,13 +78,14 @@
     "crates": {
       "type": "local",
       "command": ["crates-mcp"],
-      "enabled": true
+      "enabled": true,
+      "timeout": 60000
     },
     "bravais-cli": {
       "type": "local",
       "command": ["bravais-cli", "mcp"],
-      "enabled": true
+      "enabled": true,
+      "timeout": 60000
     }
   }
 }
-

@@ -1,8 +1,8 @@
 {
   "nixos": {
+    "type": "stdio",
     "command": "nix",
-    "args": ["run", "github:utensils/mcp-nixos", "--"],
-    "type": "stdio"
+    "args": ["run", "github:utensils/mcp-nixos", "--"]
   },
   "context7": {
     "type": "http",
@@ -16,45 +16,45 @@
     "url": "https://learn.microsoft.com/api/mcp"
   },
   "filesystem": {
+    "type": "stdio",
     "command": "npx",
-    "args": ["-y", "@modelcontextprotocol/server-filesystem", "/spacecraft-software"],
-    "type": "stdio"
+    "args": ["-y", "@modelcontextprotocol/server-filesystem", "/spacecraft-software"]
   },
   "fetch": {
+    "type": "stdio",
     "command": "uvx",
-    "args": ["--with", "mcp<2", "mcp-server-fetch"],
-    "type": "stdio"
+    "args": ["--with", "mcp<2", "mcp-server-fetch"]
   },
   "engram": {
+    "type": "stdio",
     "command": "engram",
-    "args": ["--db", "/home/mj/.gemini/engram.db", "mcp"],
-    "type": "stdio"
+    "args": ["--db", "/home/mj/.gemini/engram.db", "mcp"]
   },
   "brave-search": {
+    "type": "stdio",
     "command": "npx",
     "args": ["-y", "@brave/brave-search-mcp-server"],
-    "type": "stdio",
     "env": {
       "BRAVE_API_KEY": "YOUR_BRAVE_API_KEY"
     }
   },
   "sequential-thinking": {
+    "type": "stdio",
     "command": "npx",
-    "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
-    "type": "stdio"
+    "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
   },
   "perplexity": {
+    "type": "stdio",
     "command": "npx",
     "args": ["-y", "perplexity-mcp"],
-    "type": "stdio",
     "env": {
       "PERPLEXITY_API_KEY": "YOUR_PERPLEXITY_API_KEY"
     }
   },
   "terminal": {
+    "type": "stdio",
     "command": "npx",
     "args": ["-y", "mcp-server-terminal"],
-    "type": "stdio",
     "env": {
       "RUST_LOG": "error",
       "NO_COLOR": "1",
@@ -62,13 +62,12 @@
     }
   },
   "crates": {
-    "command": "crates-mcp",
-    "type": "stdio"
+    "type": "stdio",
+    "command": "crates-mcp"
   },
   "bravais-cli": {
+    "type": "stdio",
     "command": "bravais-cli",
-    "args": ["mcp"],
-    "type": "stdio"
+    "args": ["mcp"]
   }
 }
-

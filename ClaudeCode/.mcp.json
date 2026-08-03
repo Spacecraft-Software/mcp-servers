@@ -3,8 +3,7 @@
     "nixos": {
       "type": "stdio",
       "command": "nix",
-      "args": ["run", "github:utensils/mcp-nixos", "--"],
-      "env": {}
+      "args": ["run", "github:utensils/mcp-nixos", "--"]
     },
     "context7": {
       "type": "http",
@@ -17,24 +16,20 @@
       "type": "http",
       "url": "https://learn.microsoft.com/api/mcp"
     },
-
     "filesystem": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/spacecraft-software"],
-      "env": {}
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/spacecraft-software"]
     },
     "fetch": {
       "type": "stdio",
       "command": "uvx",
-      "args": ["--with", "mcp<2", "mcp-server-fetch"],
-      "env": {}
+      "args": ["--with", "mcp<2", "mcp-server-fetch"]
     },
     "engram": {
       "type": "stdio",
       "command": "engram",
-      "args": ["--db", "/home/mj/.gemini/engram.db", "mcp"],
-      "env": {}
+      "args": ["--db", "/home/mj/.gemini/engram.db", "mcp"]
     },
     "brave-search": {
       "type": "stdio",
@@ -47,8 +42,7 @@
     "sequential-thinking": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
-      "env": {}
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
     },
     "perplexity": {
       "type": "stdio",
@@ -75,9 +69,7 @@
     "bravais-cli": {
       "type": "stdio",
       "command": "bravais-cli",
-      "args": ["mcp"],
-      "env": {}
+      "args": ["mcp"]
     }
   }
 }
-

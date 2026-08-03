@@ -3,11 +3,7 @@
 		"nixos": {
 			"type": "stdio",
 			"command": "nix",
-			"args": [
-				"run",
-				"github:utensils/mcp-nixos",
-				"--"
-			]
+			"args": ["run", "github:utensils/mcp-nixos", "--"]
 		},
 		"context7": {
 			"type": "http",
@@ -23,37 +19,22 @@
 		"filesystem": {
 			"type": "stdio",
 			"command": "npx",
-			"args": [
-				"-y",
-				"@modelcontextprotocol/server-filesystem",
-				"/spacecraft-software"
-			]
+			"args": ["-y", "@modelcontextprotocol/server-filesystem", "/spacecraft-software"]
 		},
 		"fetch": {
 			"type": "stdio",
 			"command": "uvx",
-			"args": [
-				"--with",
-				"mcp<2",
-				"mcp-server-fetch"
-			]
+			"args": ["--with", "mcp<2", "mcp-server-fetch"]
 		},
 		"engram": {
 			"type": "stdio",
 			"command": "engram",
-			"args": [
-				"--db",
-				"/home/mj/.gemini/engram.db",
-				"mcp"
-			]
+			"args": ["--db", "/home/mj/.gemini/engram.db", "mcp"]
 		},
 		"brave-search": {
 			"type": "stdio",
 			"command": "npx",
-			"args": [
-				"-y",
-				"@brave/brave-search-mcp-server"
-			],
+			"args": ["-y", "@brave/brave-search-mcp-server"],
 			"env": {
 				"BRAVE_API_KEY": "${input:BRAVE_API_KEY}"
 			}
@@ -61,18 +42,12 @@
 		"sequential-thinking": {
 			"type": "stdio",
 			"command": "npx",
-			"args": [
-				"-y",
-				"@modelcontextprotocol/server-sequential-thinking"
-			]
+			"args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
 		},
 		"perplexity": {
 			"type": "stdio",
 			"command": "npx",
-			"args": [
-				"-y",
-				"perplexity-mcp"
-			],
+			"args": ["-y", "perplexity-mcp"],
 			"env": {
 				"PERPLEXITY_API_KEY": "${input:PERPLEXITY_API_KEY}"
 			}
@@ -80,10 +55,7 @@
 		"terminal": {
 			"type": "stdio",
 			"command": "npx",
-			"args": [
-				"-y",
-				"mcp-server-terminal"
-			],
+			"args": ["-y", "mcp-server-terminal"],
 			"env": {
 				"RUST_LOG": "error",
 				"NO_COLOR": "1",
@@ -97,9 +69,7 @@
 		"bravais-cli": {
 			"type": "stdio",
 			"command": "bravais-cli",
-			"args": [
-				"mcp"
-			]
+			"args": ["mcp"]
 		}
 	},
 	"inputs": [

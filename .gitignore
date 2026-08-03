@@ -1,2 +1,10 @@
-# Key-filled configs produced by bin/fill-keys.nu — never commit real secrets.
+# Key-filled configs produced by the fill-keys tooling — never commit real secrets.
 /dist/
+chat/
+
+# Rust build artifacts. Cargo.lock IS tracked: mcpctl ships as a binary.
+/mcpctl/target/
+
+# `nix build` output symlink.
+/result
+
