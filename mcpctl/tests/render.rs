@@ -206,6 +206,62 @@ fn documented_host_quirks_survive() {
     assert!(vscode.contains('\t'), "VS Code's file is tab-indented");
 }
 
+/// Servers whose upstream writes its log lines to **stdout**, where the host is reading
+/// JSON-RPC, paired with the environment that silences them.
+///
+/// `crates-mcp` and `mcp-server-terminal` both emit `tracing` output on stdout rather
+/// than stderr, coloured by default, so the first bytes a host reads are an ANSI escape
+/// and not a message. Hosts that skip unparseable lines (Claude Code, opencode) tolerate
+/// it; Antigravity's Go client does not, and answers `calling "initialize": invalid
+/// character '\x1b' looking for beginning of value`.
+///
+/// `RUST_LOG=error` is the entry that actually fixes it — it drops the WARN/INFO pair
+/// that would otherwise precede the handshake. `NO_COLOR` and `TERM` strip the escape
+/// sequences from anything that still reaches the stream, so an error-level line
+/// degrades to a skippable text line rather than a parse failure.
+const STDOUT_LOGGERS: &[(&str, &[(&str, &str)])] = &[
+    (
+        "crates",
+        &[("RUST_LOG", "error"), ("NO_COLOR", "1"), ("TERM", "dumb")],
+    ),
+    (
+        "terminal",
+        &[("RUST_LOG", "error"), ("NO_COLOR", "1"), ("TERM", "dumb")],
+    ),
+];
+
+/// Pins the environment that keeps a stdout-logging server's stream parseable.
+///
+/// `check` compares hosts against each other, so an `env` dropped from a manifest entry
+/// is dropped from all thirteen at once and still looks perfectly consistent — which is
+/// how `crates` shipped without `RUST_LOG` and broke only on the one host strict enough
+/// to notice. This asserts against the resolved value per host, so a per-host override
+/// cannot quietly remove it either.
+#[test]
+fn servers_that_log_to_stdout_stay_silenced() {
+    let manifest = manifest();
+    for host in HOSTS {
+        for resolved in manifest.resolve_for(host.name) {
+            let Some((_, required)) = STDOUT_LOGGERS
+                .iter()
+                .find(|(name, _)| *name == resolved.name)
+            else {
+                continue;
+            };
+            for (key, value) in *required {
+                assert_eq!(
+                    resolved.env.get(*key).map(String::as_str),
+                    Some(*value),
+                    "`{}` on `{}` must set {key}={value}; without it the server's own log \
+                     output lands on stdout and corrupts the JSON-RPC stream",
+                    resolved.name,
+                    host.name
+                );
+            }
+        }
+    }
+}
+
 #[test]
 fn generation_is_deterministic() {
     let manifest = manifest();
