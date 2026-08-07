@@ -95,8 +95,22 @@ args = ["--with", "mcp<2", "mcp-server-fetch"]
 [[servers]]
 name = "engram"
 transport = "stdio"
+# Bare name: resolved on PATH, where Bravais now supplies it from the Engram
+# flake input rather than a `cargo install` build of a working tree.
 command = "engram"
-args = ["--db", "/home/mj/.gemini/engram.db", "mcp"]
+# `--db` is a GLOBAL flag, so it precedes the `mcp` subcommand.
+#
+# The store moved off ~/.gemini/engram.db, which was never Gemini-specific —
+# just wherever the first harness happened to register it, after which every
+# other harness copied the path. It is an ordinary XDG data path now.
+#
+# Passing --db explicitly is deliberate, not redundant with the ENGRAM_DB
+# variable Bravais sets: that variable reaches processes descended from the
+# login session, but a harness launched from a desktop entry, Flatpak, or GUI
+# launcher may have a pruned environment. Engram's own --db default is the bare
+# RELATIVE path "engram.db", so a server inheriting neither silently opens a
+# brand-new empty store in whatever directory its harness started in.
+args = ["--db", "/home/mj/.local/share/engram/engram.db", "mcp"]
 
 [[servers]]
 name = "brave-search"

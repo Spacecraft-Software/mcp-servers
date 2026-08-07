@@ -52,7 +52,7 @@ extensions:
     cmd: engram
     args:
       - --db
-      - /home/mj/.gemini/engram.db
+      - /home/mj/.local/share/engram/engram.db
       - mcp
     enabled: true
     timeout: 300

@@ -36,7 +36,7 @@
     },
     "engram": {
       "type": "local",
-      "command": ["engram", "--db", "/home/mj/.gemini/engram.db", "mcp"],
+      "command": ["engram", "--db", "/home/mj/.local/share/engram/engram.db", "mcp"],
       "enabled": true,
       "timeout": 60000
     },

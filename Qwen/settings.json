@@ -23,7 +23,7 @@
     },
     "engram": {
       "command": "engram",
-      "args": ["--db", "/home/mj/.gemini/engram.db", "mcp"]
+      "args": ["--db", "/home/mj/.local/share/engram/engram.db", "mcp"]
     },
     "brave-search": {
       "command": "npx",

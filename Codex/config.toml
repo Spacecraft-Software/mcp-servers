@@ -26,7 +26,7 @@ args = ["--with", "mcp<2", "mcp-server-fetch"]
 
 [mcp_servers.engram]
 command = "engram"
-args = ["--db", "/home/mj/.gemini/engram.db", "mcp"]
+args = ["--db", "/home/mj/.local/share/engram/engram.db", "mcp"]
 
 [mcp_servers.brave-search]
 command = "npx"
