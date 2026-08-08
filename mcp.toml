@@ -201,6 +201,25 @@ env = { GITHUB_PERSONAL_ACCESS_TOKEN = "YOUR_GITHUB_PERSONAL_ACCESS_TOKEN", GITH
 [servers.overrides.VSCode]
 env = { GITHUB_PERSONAL_ACCESS_TOKEN = "${input:GITHUB_PERSONAL_ACCESS_TOKEN}", GITHUB_TOOLSETS = "context,repos,issues,pull_requests,actions", GITHUB_READ_ONLY = "1" }
 
+[[servers]]
+name = "obscura"
+transport = "stdio"
+# Bare name, like `engram`, `crates` and `bravais-cli`: Bravais installs Obscura into
+# the SYSTEM profile (modules/packages/ai.nix) rather than the user one precisely so
+# this resolves for a host launched from a desktop entry with a pruned environment.
+command = "obscura"
+args = ["mcp"]
+# Deliberately no RUST_LOG/NO_COLOR/TERM block, unlike `crates` and `terminal` — and
+# that is measured, not assumed. `obscura mcp` writes nothing to stdout but JSON-RPC
+# and nothing at all to stderr, even with RUST_LOG=debug set in the environment, so
+# there is no log output to silence. Re-probe before adding one.
+#
+# A headless browser with no Chromium and no Node: it drives navigation, clicks, forms,
+# tabs, cookies and extraction on a real V8 isolate. Two of its tools, browser_screenshot
+# and browser_pdf, exist only because Bravais builds Obscura with the `render` feature —
+# a default-feature build (which is all nixpkgs offers) drops them from tools/list
+# without erroring. If they go missing, suspect the build, not this entry.
+
 # ---------------------------------------------------------------------------
 # Hosts — where each host's template and live config files are.
 #

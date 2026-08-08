@@ -88,3 +88,8 @@ GITHUB_PERSONAL_ACCESS_TOKEN = "YOUR_GITHUB_PERSONAL_ACCESS_TOKEN"
 GITHUB_TOOLSETS = "context,repos,issues,pull_requests,actions"
 GITHUB_READ_ONLY = "1"
 
+[mcp_servers.obscura]
+command = "obscura"
+args = ["mcp"]
+enabled = true
+

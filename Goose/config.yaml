@@ -133,3 +133,11 @@ extensions:
       GITHUB_READ_ONLY: "1"
     enabled: true
     timeout: 300
+  obscura:
+    name: obscura
+    type: stdio
+    cmd: obscura
+    args:
+      - mcp
+    enabled: true
+    timeout: 300

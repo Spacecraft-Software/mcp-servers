@@ -2,7 +2,7 @@
 
 Per-tool **MCP (Model Context Protocol) server configurations** for the coding agents
 and editors I use. Each directory holds the MCP config fragment for one host, in that
-host's own dialect. They all wire up the same thirteen servers:
+host's own dialect. They all wire up the same fourteen servers:
 
 | Server | Transport | Endpoint / command | Auth |
 |--------|-----------|--------------------|------|
@@ -19,6 +19,7 @@ host's own dialect. They all wire up the same thirteen servers:
 | **crates** | stdio | `crates-mcp` ([crates-mcp](https://crates.io/crates/crates-mcp) via `cargo install`) — Rust crate search and docs | none |
 | **terminal** | stdio | `npx -y mcp-server-terminal` ([mcp-server-terminal](https://github.com/aybelatchane/mcp-server-terminal)) — TUI/CLI terminal automation | none |
 | **github** | stdio | `nix run nixpkgs#github-mcp-server -- stdio` ([github-mcp-server](https://github.com/github/github-mcp-server)) — repos, issues, PRs, Actions. Shipped **read-only** (`GITHUB_READ_ONLY=1`) and trimmed to `context,repos,issues,pull_requests,actions` | `GITHUB_PERSONAL_ACCESS_TOKEN` |
+| **obscura** | stdio | `obscura mcp` ([obscura](https://github.com/h4ckf0r0day/obscura), Nix-provided by Bravais) — headless browser automation on a real V8 isolate: navigate, click, fill forms, tabs, cookies, extract. No Chromium, no Node. `browser_screenshot` and `browser_pdf` require the `render` build feature | none |
 
 The `npx`-based servers need Node.js 18+. `brave-search`, `perplexity`, `github`, and
 `filesystem` need a token or path filled in before they work (see Notes).
