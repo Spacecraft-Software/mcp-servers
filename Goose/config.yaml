@@ -118,3 +118,18 @@ extensions:
       - mcp
     enabled: true
     timeout: 300
+  github:
+    name: github
+    type: stdio
+    cmd: nix
+    args:
+      - run
+      - nixpkgs#github-mcp-server
+      - --
+      - stdio
+    envs:
+      GITHUB_PERSONAL_ACCESS_TOKEN: YOUR_GITHUB_PERSONAL_ACCESS_TOKEN
+      GITHUB_TOOLSETS: context,repos,issues,pull_requests,actions
+      GITHUB_READ_ONLY: "1"
+    enabled: true
+    timeout: 300

@@ -39,6 +39,11 @@ env = "PERPLEXITY_API_KEY"
 placeholder = "YOUR_PERPLEXITY_API_KEY"
 description = "Perplexity API key"
 
+[[secrets]]
+env = "GITHUB_PERSONAL_ACCESS_TOKEN"
+placeholder = "YOUR_GITHUB_PERSONAL_ACCESS_TOKEN"
+description = "GitHub personal access token"
+
 # ---------------------------------------------------------------------------
 # Servers — declared in every host, in this order.
 # ---------------------------------------------------------------------------
@@ -168,6 +173,33 @@ name = "bravais-cli"
 transport = "stdio"
 command = "bravais-cli"
 args = ["mcp"]
+
+[[servers]]
+name = "github"
+transport = "stdio"
+command = "nix"
+# Reached through `nix run`, like `nixos`, rather than as a bare binary: there is no
+# `github-mcp-server` on PATH on this machine. `nixpkgs#` resolves through the flake
+# registry, whose `nixpkgs` entry is pinned to a local store path here, so evaluation
+# needs no network — but the version therefore follows the system closure rather than
+# nixpkgs HEAD. Check `nix run nixpkgs#github-mcp-server -- --version` before assuming
+# a tool added upstream exists here.
+args = ["run", "nixpkgs#github-mcp-server", "--", "stdio"]
+# GITHUB_READ_ONLY is load-bearing, not a convenience. Standard §6.4 makes outbound
+# contribution default-deny and forbids automation from initiating one; this server's
+# write tools (create PR, open issue, comment, push) are exactly that act, on any repo
+# the token can reach. Dropping this line hands every host in this repository the
+# ability to perform it silently.
+#
+# GITHUB_TOOLSETS trims the tool surface to the five toolsets this workspace uses; the
+# default exposes every toolset to every host on every launch.
+env = { GITHUB_PERSONAL_ACCESS_TOKEN = "YOUR_GITHUB_PERSONAL_ACCESS_TOKEN", GITHUB_TOOLSETS = "context,repos,issues,pull_requests,actions", GITHUB_READ_ONLY = "1" }
+
+# VS Code resolves secrets through a prompted `input`, never a literal placeholder. The
+# other two variables are repeated because an override replaces `env` wholesale — it does
+# not merge — so omitting them would drop read-only mode on this host alone.
+[servers.overrides.VSCode]
+env = { GITHUB_PERSONAL_ACCESS_TOKEN = "${input:GITHUB_PERSONAL_ACCESS_TOKEN}", GITHUB_TOOLSETS = "context,repos,issues,pull_requests,actions", GITHUB_READ_ONLY = "1" }
 
 # ---------------------------------------------------------------------------
 # Hosts — where each host's template and live config files are.

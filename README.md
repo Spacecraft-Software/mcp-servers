@@ -2,7 +2,7 @@
 
 Per-tool **MCP (Model Context Protocol) server configurations** for the coding agents
 and editors I use. Each directory holds the MCP config fragment for one host, in that
-host's own dialect. They all wire up the same twelve servers:
+host's own dialect. They all wire up the same thirteen servers:
 
 | Server | Transport | Endpoint / command | Auth |
 |--------|-----------|--------------------|------|
@@ -12,15 +12,16 @@ host's own dialect. They all wire up the same twelve servers:
 | **bravais-cli** | stdio | `bravais-cli mcp` — Bravais OS command replacement and shell translator | none |
 | **filesystem** | stdio | `npx -y @modelcontextprotocol/server-filesystem <path>` — sandboxed file access | none (set a path) |
 | **fetch** | stdio | `uvx --with 'mcp<2' mcp-server-fetch` — fetch live web content (the `mcp<2` pin is required: mcp-server-fetch 2026.7.10 imports `McpError`, renamed to `MCPError` in mcp 2.0) | none |
-| **engram** | stdio | `engram --db ~/.gemini/engram.db mcp` — shared verbatim chat memory | none |
+| **engram** | stdio | `engram --db ~/.local/share/engram/engram.db mcp` — shared verbatim chat memory | none |
 | **brave-search** | stdio | `npx -y @brave/brave-search-mcp-server` — web, local, news, image, video search | `BRAVE_API_KEY` |
 | **perplexity** | stdio | `npx -y perplexity-mcp` — Perplexity search | `PERPLEXITY_API_KEY` |
 | **sequential-thinking** | stdio | `npx -y @modelcontextprotocol/server-sequential-thinking` — step-by-step reasoning | none |
 | **crates** | stdio | `crates-mcp` ([crates-mcp](https://crates.io/crates/crates-mcp) via `cargo install`) — Rust crate search and docs | none |
 | **terminal** | stdio | `npx -y mcp-server-terminal` ([mcp-server-terminal](https://github.com/aybelatchane/mcp-server-terminal)) — TUI/CLI terminal automation | none |
+| **github** | stdio | `nix run nixpkgs#github-mcp-server -- stdio` ([github-mcp-server](https://github.com/github/github-mcp-server)) — repos, issues, PRs, Actions. Shipped **read-only** (`GITHUB_READ_ONLY=1`) and trimmed to `context,repos,issues,pull_requests,actions` | `GITHUB_PERSONAL_ACCESS_TOKEN` |
 
-The `npx`-based servers need Node.js 18+. `brave-search`, `perplexity`, and `filesystem`
-need a token or path filled in before they work (see Notes).
+The `npx`-based servers need Node.js 18+. `brave-search`, `perplexity`, `github`, and
+`filesystem` need a token or path filled in before they work (see Notes).
 
 ## Supported hosts
 
@@ -113,11 +114,19 @@ that stops at `render` reaches no host while `git status` stays clean.
 ## Notes
 
 - Files are **templates** with placeholders — replace these locally, never commit real
-  values: `YOUR_CONTEXT7_API_KEY`, `YOUR_BRAVE_API_KEY`, `YOUR_PERPLEXITY_API_KEY`. The
-  `filesystem` server uses the hardcoded path `/spacecraft-software`. Until placeholders
-  are filled in, those servers won't connect (the other servers work as-is). VS Code
-  instead prompts for the Context7, Brave, and Perplexity keys via its `inputs`
-  mechanism.
+  values: `YOUR_CONTEXT7_API_KEY`, `YOUR_BRAVE_API_KEY`, `YOUR_PERPLEXITY_API_KEY`,
+  `YOUR_GITHUB_PERSONAL_ACCESS_TOKEN`. The `filesystem` server uses the hardcoded path
+  `/spacecraft-software`. Until placeholders are filled in, those servers won't connect
+  (the other servers work as-is). VS Code instead prompts for the Context7, Brave,
+  Perplexity, and GitHub keys via its `inputs` mechanism.
+- `github` ships **read-only** — `GITHUB_READ_ONLY=1`, which drops the tool surface from
+  ~90 tools to 25 with no `create_*`, `update_*`, `merge_*`, or `push_*` among them.
+  That is a Standard §6.4 control, not a convenience: outbound contribution is
+  default-deny and automation never initiates one, so the write tools that would let a
+  session open an upstream PR or issue are not present to be called. `GITHUB_TOOLSETS`
+  narrows it further to `context,repos,issues,pull_requests,actions`. Both are set once
+  in `mcp.toml`, and the VS Code override repeats them because an override replaces `env`
+  wholesale rather than merging into it.
 - Schemas differ per host (e.g. Qwen uses `httpUrl`, Codex uses `http_headers`, Copilot
   CLI omits the `mcpServers` wrapper). See `CLAUDE.md` for the full per-host schema table.
 - `sequential-thinking` is declared but disabled by default for **Claude Code only** —
@@ -140,11 +149,18 @@ The tracked templates are never touched, so no secret can be committed.
 | `CONTEXT7_API_KEY` | context7 | a request header |
 | `BRAVE_API_KEY` | brave-search | an environment variable |
 | `PERPLEXITY_API_KEY` | perplexity | an environment variable |
+| `GITHUB_PERSONAL_ACCESS_TOKEN` | github | an environment variable |
+
+The GitHub token only ever needs read scopes, because the server is configured read-only:
+`Contents`, `Metadata`, `Issues`, `Pull requests`, and `Actions` at *Read* for a
+fine-grained token, or `repo` for a classic one. `github-mcp-server list-scopes` prints
+what the enabled toolsets actually require.
 
 ```sh
 mcpctl fill-keys                 # prompts for each key, with echo off
 
 CONTEXT7_API_KEY=ctx7sk-... BRAVE_API_KEY=... PERPLEXITY_API_KEY=pplx-... \
+  GITHUB_PERSONAL_ACCESS_TOKEN=github_pat_... \
   mcpctl fill-keys --yes         # unattended; any key already exported is used
 ```
 
