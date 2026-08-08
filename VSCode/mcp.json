@@ -75,6 +75,16 @@
 			"type": "stdio",
 			"command": "bravais-cli",
 			"args": ["mcp"]
+		},
+		"github": {
+			"type": "stdio",
+			"command": "nix",
+			"args": ["run", "nixpkgs#github-mcp-server", "--", "stdio"],
+			"env": {
+				"GITHUB_PERSONAL_ACCESS_TOKEN": "${input:GITHUB_PERSONAL_ACCESS_TOKEN}",
+				"GITHUB_TOOLSETS": "context,repos,issues,pull_requests,actions",
+				"GITHUB_READ_ONLY": "1"
+			}
 		}
 	},
 	"inputs": [
@@ -94,6 +104,12 @@
 			"id": "PERPLEXITY_API_KEY",
 			"type": "promptString",
 			"description": "Perplexity API key",
+			"password": true
+		},
+		{
+			"id": "GITHUB_PERSONAL_ACCESS_TOKEN",
+			"type": "promptString",
+			"description": "GitHub personal access token",
 			"password": true
 		}
 	]

@@ -108,3 +108,32 @@ Two edits, and the split matters:
 
 The manifest validates that both sides agree; a host in one and not the other is an
 error, not a silent omission.
+
+## Adding a server
+
+One edit for a server that needs no credential: a `[[servers]]` entry in `mcp.toml`. Its
+position in the file is the order every host lists servers in, and `tests/render.rs`
+derives its parity expectation from the manifest, so no test changes.
+
+A server that needs a credential takes **three** more edits, and the third is easy to miss:
+
+- `[[secrets]]` in `mcp.toml` — the `placeholder` ↔ `env` pair `fill-keys` resolves.
+- `[servers.overrides.VSCode]` — VS Code cannot hold a literal secret; it wants
+  `${input:<ENV>}`. An override replaces `env`/`headers` **wholesale** rather than merging,
+  so every other variable in the block has to be repeated or it silently disappears on that
+  host alone.
+- `ACCEPTED` in `mcpctl/src/check.rs` — that override is a per-host difference, and
+  `mcpctl check` reports any undeclared difference as drift. Without a `Variation` row for
+  the new `VSCode`/`<server>` pair, `check` fails, and it is a CI gate.
+
+Then the usual: `mcpctl render`, the gates, `deploy`, `fill-keys` (invariant 3).
+
+Two things worth measuring rather than assuming, both learned the hard way (see `crates`
+and `fetch` in `mcp.toml`): whether the server writes its logs to **stdout**, which
+poisons the JSON-RPC stream and hard-fails strict clients, and whether its dependencies
+need pinning. Probe stdout before trusting it:
+
+```sh
+tail -f requests.jsonl | timeout 10 <server command> > out.txt 2> err.txt
+head -c 2 out.txt    # must be `{"` — anything else means logs are on the wrong stream
+```
