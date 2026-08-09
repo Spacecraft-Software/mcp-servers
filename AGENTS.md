@@ -113,7 +113,7 @@ error, not a silent omission.
 
 One edit for a server that needs no credential: a `[[servers]]` entry in `mcp.toml`. Its
 position in the file is the order every host lists servers in, and `tests/render.rs`
-derives its parity expectation from the manifest, so no test changes.
+derives its parity expectation from `resolve_for`, so no test changes.
 
 A server that needs a credential takes **three** more edits, and the third is easy to miss:
 
@@ -137,3 +137,26 @@ need pinning. Probe stdout before trusting it:
 tail -f requests.jsonl | timeout 10 <server command> > out.txt 2> err.txt
 head -c 2 out.txt    # must be `{"` — anything else means logs are on the wrong stream
 ```
+
+## Omitting a server from one host
+
+`omit = true` in `[servers.overrides.<Host>]` means that host does not carry the server
+at all — no entry is emitted anywhere. Unlike the `VSCode` overrides above there is **no**
+`check.rs` row to remember: `check` reads omissions straight from the manifest and reports
+them under `omitted`, separately from the `missing` list that fails the gate.
+
+`enabled = false` is a different mechanism and not a substitute. A disabled server is
+still written into the host's config and merely switched off. `context7` and
+`microsoft-learn` are omitted for Claude Code because it hides a claude.ai connector whose
+URL a locally configured server already claims, and it is *presence* of the URL that does
+the hiding.
+
+Invariant 3 bites harder here. `render` drops the entry from the template, but `deploy`
+then sees the live entry as a **stray** and preserves it byte-for-byte, and `--yes` forces
+non-interactive mode so it never prunes. Finish the job with `mcpctl deploy --host <Host>`
+from a real terminal — no `--yes`, host not running — and answer `y` to each removal.
+
+`mcpctl` only ever touches the **top-level** `mcpServers` block of `~/.claude.json`.
+Claude Code also stores per-project servers under `projects.<path>.mcpServers`; `splice`
+never looks there, so those copies are invisible to `deploy` and need
+`claude mcp remove -s local`.
