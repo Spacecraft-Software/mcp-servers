@@ -52,12 +52,25 @@ description = "GitHub personal access token"
 name = "nixos"
 transport = "stdio"
 command = "nix"
-args = ["run", "github:utensils/mcp-nixos", "--"]
+args = ["run", "github:utensils/mcp-nixos/b94d837f37c43d2b9030c3af5140bcaa9700de31", "--"]
 # There is no `mcp-nixos` binary on this machine — it is only ever reached through
 # `nix run`. An Antigravity override that called it directly shipped in the first
 # manifest and Antigravity answered with
 # `exec: "mcp-nixos": executable file not found in $PATH`. Do not reintroduce it
 # without first checking `command -v mcp-nixos`.
+#
+# The rev is load-bearing. This was `github:utensils/mcp-nixos`, a bare branch ref,
+# which nix re-resolves once its flake-tarball TTL expires. On 2026-08-09 that landed
+# on mcp-nixos 3.0.0, whose closure is not in the binary cache: every cold start then
+# tried to fetch 144.9 MiB and build two derivations, blowing the 30 s MCP init timeout
+# in both Codex and Claude Code. Worse, the build saturated the machine while the other
+# servers were starting, so `perplexity` and `sequential-thinking` timed out too —
+# servers that start in 14 s and 0.9 s on their own. An immutable rev is fetched once
+# and cached permanently, so a drifting upstream cannot repeat that.
+#
+# Bumping it is deliberate: pick the new rev, run
+# `nix build github:utensils/mcp-nixos/<rev>` to prove it substitutes rather than
+# builds, then render and deploy.
 
 [[servers]]
 name = "context7"

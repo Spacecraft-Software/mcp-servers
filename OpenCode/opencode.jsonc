@@ -3,7 +3,7 @@
   "mcp": {
     "nixos": {
       "type": "local",
-      "command": ["nix", "run", "github:utensils/mcp-nixos", "--"],
+      "command": ["nix", "run", "github:utensils/mcp-nixos/b94d837f37c43d2b9030c3af5140bcaa9700de31", "--"],
       "enabled": true,
       "timeout": 60000
     },

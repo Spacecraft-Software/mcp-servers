@@ -8,7 +8,7 @@ extensions:
     cmd: nix
     args:
       - run
-      - github:utensils/mcp-nixos
+      - github:utensils/mcp-nixos/b94d837f37c43d2b9030c3af5140bcaa9700de31
       - --
     enabled: true
     timeout: 300

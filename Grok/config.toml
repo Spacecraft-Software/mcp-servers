@@ -4,7 +4,7 @@
 
 [mcp_servers.nixos]
 command = "nix"
-args = ["run", "github:utensils/mcp-nixos", "--"]
+args = ["run", "github:utensils/mcp-nixos/b94d837f37c43d2b9030c3af5140bcaa9700de31", "--"]
 enabled = true
 
 [mcp_servers.context7]
