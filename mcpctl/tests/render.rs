@@ -9,6 +9,7 @@
 //! still shows up here as soon as the manifest gains a server that exercises it.
 
 use std::collections::BTreeMap;
+use std::fmt::Write as _;
 use std::path::PathBuf;
 
 use mcpctl::dialect::{self, HOSTS, Strictness, Transport};
@@ -44,16 +45,16 @@ fn every_generated_template_parses() {
 }
 
 #[test]
-fn every_host_declares_every_server() {
+fn every_host_declares_the_servers_it_resolves() {
     let manifest = manifest();
     let outputs = render::generate(&manifest).expect("generation must succeed");
-    let expected: Vec<&str> = manifest
-        .servers
-        .iter()
-        .map(|server| server.name.as_str())
-        .collect();
 
     for host in HOSTS {
+        // Per host, not once for all of them: a host may declare `omit = true` and not
+        // carry a server at all, and `resolve_for` is the only thing that knows.
+        let resolved = manifest.resolve_for(host.name);
+        let expected: Vec<&str> = resolved.iter().map(|server| server.name.as_str()).collect();
+
         let output = outputs
             .iter()
             .find(|output| output.path.to_string_lossy() == host.template)
@@ -66,10 +67,117 @@ fn every_host_declares_every_server() {
         let declared: Vec<&str> = servers.names().collect();
         assert_eq!(
             declared, expected,
-            "`{}` does not declare the manifest's servers in order",
+            "`{}` does not declare its resolved servers in order",
             host.name
         );
     }
+}
+
+/// Servers claude.ai ships a connector for, paired with the host in their URL.
+///
+/// Claude Code hides a claude.ai connector whose URL a locally configured server
+/// already claims. `enabled = false` does not clear it: a disabled server is still
+/// written into `~/.claude.json`, and it is presence of the URL that does the hiding.
+/// So these are omitted from Claude Code outright — and only from Claude Code, because
+/// no other host has a connector to fall back on.
+const CLAUDE_AI_SUPPLIES: &[(&str, &str)] = &[
+    ("context7", "mcp.context7.com"),
+    ("microsoft-learn", "learn.microsoft.com"),
+];
+
+#[test]
+fn claude_code_omits_what_claude_ai_supplies() {
+    let manifest = manifest();
+    let outputs = render::generate(&manifest).expect("generation must succeed");
+
+    let claude = outputs
+        .iter()
+        .find(|output| output.path.to_string_lossy() == "ClaudeCode/.mcp.json")
+        .expect("the Claude Code template is generated");
+
+    for (name, url_host) in CLAUDE_AI_SUPPLIES {
+        assert!(
+            !claude.text.contains(&format!("\"{name}\"")),
+            "ClaudeCode/.mcp.json still declares `{name}`"
+        );
+        // Assert the URL too, not just the key: the hiding is keyed on the endpoint, so
+        // renaming the server would not be enough to bring the connector back.
+        assert!(
+            !claude.text.contains(url_host),
+            "ClaudeCode/.mcp.json still claims {url_host}, which hides the connector"
+        );
+    }
+
+    for host in HOSTS.iter().filter(|host| host.name != "ClaudeCode") {
+        let declared: Vec<String> = manifest
+            .resolve_for(host.name)
+            .into_iter()
+            .map(|server| server.name)
+            .collect();
+        for (name, _) in CLAUDE_AI_SUPPLIES {
+            assert!(
+                declared.iter().any(|entry| entry == name),
+                "`{}` must still carry `{name}` — the omission is Claude Code only",
+                host.name
+            );
+        }
+    }
+}
+
+#[test]
+fn omission_does_not_leak_into_claude_codes_disabled_list() {
+    let outputs = render::generate(&manifest()).expect("generation must succeed");
+
+    let settings = outputs
+        .iter()
+        .find(|output| output.path.to_string_lossy() == "ClaudeCode/settings.json")
+        .expect("the Claude Code companion is generated");
+    let value: serde_json::Value =
+        serde_json::from_str(&settings.text).expect("the companion is JSON");
+
+    assert_eq!(
+        value["disabledMcpjsonServers"],
+        serde_json::json!(["sequential-thinking"]),
+        "an omitted server must not turn into a disabled one — a disabled server is \
+         still written into ~/.claude.json, which is exactly what hides the connector"
+    );
+}
+
+#[test]
+fn an_omitted_server_may_not_also_override_fields() {
+    // `omit` wins over every other key, so a manifest carrying both is a mistake worth
+    // naming rather than a silent no-op.
+    //
+    // Every host has to be declared or `validate` bails on the host cross-check first
+    // and the test would pass without ever reaching the rule it is about.
+    let hosts = HOSTS.iter().fold(String::new(), |mut text, host| {
+        let _ = writeln!(
+            text,
+            "\n[[hosts]]\nname = \"{}\"\nlive = [\"~/x\"]",
+            host.name
+        );
+        text
+    });
+    let text = format!(
+        r#"
+[[servers]]
+name = "context7"
+transport = "http"
+url = "https://mcp.context7.com/mcp"
+
+[servers.overrides.ClaudeCode]
+omit = true
+url = "https://example.invalid/mcp"
+{hosts}"#
+    );
+
+    let error = Manifest::parse(&text)
+        .expect_err("a manifest that both omits and overrides must be rejected");
+    let message = format!("{error:#}");
+    assert!(
+        message.contains("omitted on host `ClaudeCode`"),
+        "rejected for the wrong reason: {message}"
+    );
 }
 
 #[test]

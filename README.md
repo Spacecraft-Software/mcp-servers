@@ -2,13 +2,14 @@
 
 Per-tool **MCP (Model Context Protocol) server configurations** for the coding agents
 and editors I use. Each directory holds the MCP config fragment for one host, in that
-host's own dialect. They all wire up the same fourteen servers:
+host's own dialect. Fourteen servers are declared; every host wires up all fourteen
+except Claude Code, which omits two (see [Notes](#notes)):
 
 | Server | Transport | Endpoint / command | Auth |
 |--------|-----------|--------------------|------|
 | **nixos** | stdio | `nix run github:utensils/mcp-nixos --` ([mcp-nixos](https://github.com/utensils/mcp-nixos)) — nixpkgs / NixOS options | none |
-| **context7** | http | `https://mcp.context7.com/mcp` — Upstash Context7 library docs | `CONTEXT7_API_KEY`, sent as `Authorization: Bearer` |
-| **microsoft-learn** | http | `https://learn.microsoft.com/api/mcp` — Microsoft Learn docs | none |
+| **context7** | http | `https://mcp.context7.com/mcp` — Upstash Context7 library docs *(not on Claude Code)* | `CONTEXT7_API_KEY`, sent as `Authorization: Bearer` |
+| **microsoft-learn** | http | `https://learn.microsoft.com/api/mcp` — Microsoft Learn docs *(not on Claude Code)* | none |
 | **bravais-cli** | stdio | `bravais-cli mcp` — Bravais OS command replacement and shell translator | none |
 | **filesystem** | stdio | `npx -y @modelcontextprotocol/server-filesystem <path>` — sandboxed file access | none (set a path) |
 | **fetch** | stdio | `uvx --with 'mcp<2' mcp-server-fetch` — fetch live web content (the `mcp<2` pin is required: mcp-server-fetch 2026.7.10 imports `McpError`, renamed to `MCPError` in mcp 2.0) | none |
@@ -101,7 +102,9 @@ that stops at `render` reaches no host while `git status` stays clean.
   `~/.claude.json` changes ~60 lines and leaves the other 6,800 byte-identical.
 - **Servers it does not manage are never dropped.** goose keeps ~16 builtin extensions in
   the same block; they are reported and preserved. Elsewhere a stray can be pruned, but
-  only after an explicit `y`.
+  only after an explicit `y` — and `--yes` forces non-interactive mode, so it never
+  prunes. A server the manifest newly omits for a host becomes a stray in that host's
+  live config and survives until you prune it from a real terminal.
 - **A working key is never replaced by a placeholder**, and a placeholder is never written
   into a live config — an unfilled secret is omitted and reported instead, because a
   rejected credential is worse than an absent one.
@@ -134,6 +137,12 @@ that stops at `render` reaches no host while `git status` stays clean.
   `.mcp.json` has no per-server disable field, so `ClaudeCode/settings.json` turns it off
   via `disabledMcpjsonServers`. Every other host runs it enabled. This is expressed once
   in `mcp.toml` as a per-host `enabled = false` override.
+- `context7` and `microsoft-learn` are **omitted entirely for Claude Code**. claude.ai
+  ships its own connector for each, and Claude Code hides a connector whose URL a locally
+  configured server already claims. Unlike `sequential-thinking` above, `enabled = false`
+  would not do: a disabled server is still written into `~/.claude.json`, and it is
+  *presence* of the URL, not the switch, that hides the connector. This is expressed once
+  in `mcp.toml` as a per-host `omit = true` override. Every other host carries both.
 - **Do not hand-edit a file under a host directory.** They are generated; the next
   `mcpctl render` overwrites them, and CI fails when they disagree with `mcp.toml`.
 - The build needs a working cargo. `nix develop` provides one; a `rustup` toolchain works
@@ -147,7 +156,7 @@ The tracked templates are never touched, so no secret can be committed.
 
 | Env var | Server | Where it lands |
 |---------|--------|----------------|
-| `CONTEXT7_API_KEY` | context7 | a request header |
+| `CONTEXT7_API_KEY` | context7 | a request header (every host except Claude Code) |
 | `BRAVE_API_KEY` | brave-search | an environment variable |
 | `PERPLEXITY_API_KEY` | perplexity | an environment variable |
 | `GITHUB_PERSONAL_ACCESS_TOKEN` | github | an environment variable |

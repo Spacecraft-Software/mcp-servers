@@ -9,7 +9,7 @@
 //! server change never requires touching Rust, and a newly supported host never
 //! requires touching the manifest's server list.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, bail};
@@ -108,6 +108,13 @@ pub struct Override {
     pub headers: Option<OrderedMap>,
     /// Replacement enabled state.
     pub enabled: Option<bool>,
+    /// Whether this host does not carry the server at all.
+    ///
+    /// Distinct from `enabled = false`, which still emits the entry and only switches
+    /// it off. Claude Code hides a claude.ai connector whose URL a locally configured
+    /// server already claims, so for those the entry has to be absent, not off.
+    #[serde(default)]
+    pub omit: bool,
 }
 
 /// Per-host file locations and behavioral flags.
@@ -179,8 +186,15 @@ impl Manifest {
         let path = repo.join("mcp.toml");
         let text = std::fs::read_to_string(&path)
             .with_context(|| format!("cannot read `{}`", path.display()))?;
-        let manifest: Self =
-            toml::from_str(&text).with_context(|| format!("cannot parse `{}`", path.display()))?;
+        Self::parse(&text).with_context(|| format!("cannot parse `{}`", path.display()))
+    }
+
+    /// Parses and validates manifest text.
+    ///
+    /// Split out of [`Self::load`] so the validation rules can be exercised without a
+    /// repository on disk.
+    pub fn parse(text: &str) -> Result<Self> {
+        let manifest: Self = toml::from_str(text)?;
         manifest.validate()?;
         Ok(manifest)
     }
@@ -215,10 +229,20 @@ impl Manifest {
                 }
                 _ => {}
             }
-            for host in server.overrides.keys() {
+            for (host, entry) in &server.overrides {
                 if !HOSTS.iter().any(|known| known.name == host) {
                     bail!(
                         "server `{}` declares an override for unknown host `{host}`",
+                        server.name
+                    );
+                }
+                // An omitted server is never emitted, so any field alongside `omit`
+                // would silently do nothing. Say so rather than accept it.
+                if entry.omit && entry.replaces_a_field() {
+                    bail!(
+                        "server `{}` is omitted on host `{host}` but also overrides \
+                         fields there; an omitted server is never emitted, so those \
+                         have no effect",
                         server.name
                     );
                 }
@@ -227,10 +251,16 @@ impl Manifest {
         Ok(())
     }
 
-    /// Applies `host`'s overrides to every server, in manifest order.
+    /// Applies `host`'s overrides to every server it carries, in manifest order.
+    ///
+    /// Servers the host omits are filtered out here rather than at each call site.
+    /// Every caller — `render`, `deploy`, `fill-keys` — means "the servers this host
+    /// has", and asking each to remember the filter is how a server ends up shipped
+    /// somewhere it was declared absent.
     pub fn resolve_for(&self, host: &str) -> Vec<Resolved> {
         self.servers
             .iter()
+            .filter(|server| !server.is_omitted_for(host))
             .map(|server| {
                 let overrides = server.overrides.get(host);
                 Resolved {
@@ -259,9 +289,40 @@ impl Manifest {
             .collect()
     }
 
+    /// Names `host` deliberately does not carry.
+    ///
+    /// `check` compares templates against each other and needs this to tell a declared
+    /// omission from a template someone edited by hand.
+    pub fn omitted_for(&self, host: &str) -> BTreeSet<&str> {
+        self.servers
+            .iter()
+            .filter(|server| server.is_omitted_for(host))
+            .map(|server| server.name.as_str())
+            .collect()
+    }
+
     /// Looks up a host's manifest entry.
     pub fn host(&self, name: &str) -> Option<&HostConfig> {
         self.hosts.iter().find(|host| host.name == name)
+    }
+}
+
+impl Server {
+    /// Whether `host` deliberately does not carry this server at all.
+    pub fn is_omitted_for(&self, host: &str) -> bool {
+        self.overrides.get(host).is_some_and(|entry| entry.omit)
+    }
+}
+
+impl Override {
+    /// Whether this override replaces any field, as opposed to only setting `omit`.
+    fn replaces_a_field(&self) -> bool {
+        self.command.is_some()
+            || self.args.is_some()
+            || self.env.is_some()
+            || self.url.is_some()
+            || self.headers.is_some()
+            || self.enabled.is_some()
     }
 }
 

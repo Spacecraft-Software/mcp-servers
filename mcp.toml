@@ -16,6 +16,9 @@
 #   * Change a server here, never in a template — `render` overwrites templates.
 #   * `[servers.overrides.<Host>]` records a difference that is CORRECT for that host.
 #     Anything not listed there is drift and `check` will fail on it.
+#   * `omit = true` in `[servers.overrides.<Host>]` means that host does not carry the
+#     server AT ALL — no entry is emitted anywhere. That is not `enabled = false`,
+#     which still writes the entry and only switches it off.
 #   * Never put a real API key here. Secrets are placeholders, filled into the live
 #     configs by `mcpctl fill-keys`.
 
@@ -89,10 +92,22 @@ headers = { Authorization = "Bearer YOUR_CONTEXT7_API_KEY" }
 [servers.overrides.VSCode]
 headers = { Authorization = "Bearer ${input:CONTEXT7_API_KEY}" }
 
+# Claude Code hides a claude.ai connector when a locally configured server claims the
+# same URL, so "claude.ai Context7" never appears while this entry does. `enabled =
+# false` does not help: a disabled server is still written into ~/.claude.json, and it
+# is *presence* of the URL, not the switch, that hides the connector. Absent, not off.
+[servers.overrides.ClaudeCode]
+omit = true
+
 [[servers]]
 name = "microsoft-learn"
 transport = "http"
 url = "https://learn.microsoft.com/api/mcp"
+
+# Same as context7 above: "claude.ai Microsoft Learn" stays hidden for as long as a
+# local server claims https://learn.microsoft.com/api/mcp.
+[servers.overrides.ClaudeCode]
+omit = true
 
 [[servers]]
 name = "filesystem"
