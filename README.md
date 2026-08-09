@@ -110,6 +110,10 @@ that stops at `render` reaches no host while `git status` stays clean.
   rejected credential is worse than an absent one.
 - **Every rewrite is re-parsed before it is written**, the write is a rename over a fully
   written temporary, and the previous contents are copied to `~/.mcp-backup/<timestamp>/`.
+  A backup is a verbatim copy of a live config, keys and all, so the vault, its timestamp
+  directories, and every copy in them are created owner-only (`0700`/`0600`). The
+  temporary is narrowed before anything is written into it, and the replaced file's own
+  mode is carried across — a config you have locked down to `0600` stays that way.
 - **It refuses to write to a config whose host is running** (Claude Code rewrites
   `~/.claude.json` on exit, silently reverting a deploy). Exit the host, or pass `--force`.
 - **It defaults to `--dry-run`** whenever there is no terminal, or `CI` / `CLAUDECODE` is

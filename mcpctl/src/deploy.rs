@@ -524,25 +524,81 @@ pub fn verify(text: &str, host: &Host, path: &Path, managed: &[String]) -> Resul
     Ok(())
 }
 
+/// Mode for a directory holding credentials: owner only, no group, no other.
+const OWNER_ONLY_DIR: u32 = 0o700;
+
+/// Mode for a file holding credentials: owner read/write only.
+const OWNER_ONLY_FILE: u32 = 0o600;
+
+/// Restricts a path to its owner.
+#[cfg(unix)]
+fn restrict(path: &Path, mode: u32) -> Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+
+    std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode))
+        .with_context(|| format!("cannot restrict permissions on `{}`", path.display()))
+}
+
+/// Permission bits are a Unix concept; elsewhere there is nothing to restrict.
+#[cfg(not(unix))]
+fn restrict(_path: &Path, _mode: u32) -> Result<()> {
+    Ok(())
+}
+
 /// Writes by renaming a fully written temporary over the target.
-fn write_atomically(path: &Path, text: &str) -> Result<()> {
+///
+/// The temporary is narrowed before anything is written into it. These files hold real
+/// API keys, and `fs::write` creates at 0644, so a wide-open copy of every credential
+/// would otherwise exist for as long as the write takes. The mode of the file being
+/// replaced is carried across too: a rename adopts the temporary's permissions, so
+/// without this a config the user had deliberately locked down to 0600 would be
+/// silently widened by the next deploy.
+pub fn write_atomically(path: &Path, text: &str) -> Result<()> {
     let temporary = path.with_extension("mcpctl-tmp");
+    std::fs::File::create(&temporary)
+        .with_context(|| format!("cannot create `{}`", temporary.display()))?;
+    restrict(&temporary, OWNER_ONLY_FILE)?;
     std::fs::write(&temporary, text)
         .with_context(|| format!("cannot write `{}`", temporary.display()))?;
+
+    if let Ok(existing) = std::fs::metadata(path) {
+        std::fs::set_permissions(&temporary, existing.permissions()).with_context(|| {
+            format!(
+                "cannot carry `{}`'s permissions onto its replacement",
+                path.display()
+            )
+        })?;
+    }
+
     std::fs::rename(&temporary, path)
         .with_context(|| format!("cannot replace `{}`", path.display()))?;
     Ok(())
 }
 
 /// Copies a file into the backup directory before it is replaced.
-fn backup(path: &Path, root: &Path) -> Result<()> {
+///
+/// A backup is a byte-for-byte copy of a live config, so it holds every real API key
+/// that config holds. `create_dir_all` leaves 0755 behind and `fs::copy` preserves the
+/// source's 0644, which together publish those keys to every account on the machine —
+/// and unlike the live config, a backup accumulates and is never looked at again. Both
+/// the vault and the copy are therefore narrowed to their owner.
+pub fn backup(path: &Path, root: &Path) -> Result<()> {
+    if let Some(vault) = root.parent() {
+        std::fs::create_dir_all(vault)
+            .with_context(|| format!("cannot create `{}`", vault.display()))?;
+        restrict(vault, OWNER_ONLY_DIR)?;
+    }
     std::fs::create_dir_all(root).with_context(|| format!("cannot create `{}`", root.display()))?;
+    restrict(root, OWNER_ONLY_DIR)?;
+
     let flattened = path
         .to_string_lossy()
         .trim_start_matches('/')
         .replace('/', "_");
-    std::fs::copy(path, root.join(flattened))
+    let destination = root.join(flattened);
+    std::fs::copy(path, &destination)
         .with_context(|| format!("cannot back up `{}`", path.display()))?;
+    restrict(&destination, OWNER_ONLY_FILE)?;
     Ok(())
 }
 
