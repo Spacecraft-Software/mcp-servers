@@ -293,6 +293,15 @@ env vars under `[mcp_servers.<name>.env]`."""
 [[hosts]]
 name = "Kimi"
 live = ["~/.kimi-code/mcp.json"]
+# `~/.kimi-code/config.toml` is NOT a second live path, despite having carried a
+# `[mcp.client]` + `[mcp.client.servers.*]` block listing twelve servers until
+# 2026-08-09. The installed binary does not read it: `mcp.client.servers`,
+# `mcp.client`, and `tool_call_timeout_ms` all appear zero times in it, against 84
+# hits for `mcpServers` and 20 for `mcp.json`. The block was a leftover from an
+# older Kimi that has since moved MCP config to `mcp.json`, and it sat there
+# unmanaged, drifting, for long enough to look authoritative. It has been removed
+# from the live file. Do not add it to `live` and do not build a dialect for its
+# nested wrapper — measure the binary first, as above.
 
 [[hosts]]
 name = "Gemini"
