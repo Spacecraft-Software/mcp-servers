@@ -34,5 +34,11 @@
   },
   "bravais-cli": {
     "enabled": true
+  },
+  "github": {
+    "enabled": true
+  },
+  "obscura": {
+    "enabled": true
   }
 }

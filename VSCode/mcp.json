@@ -3,7 +3,7 @@
 		"nixos": {
 			"type": "stdio",
 			"command": "nix",
-			"args": ["run", "github:utensils/mcp-nixos", "--"]
+			"args": ["run", "github:utensils/mcp-nixos/b94d837f37c43d2b9030c3af5140bcaa9700de31", "--"]
 		},
 		"context7": {
 			"type": "http",
@@ -75,6 +75,21 @@
 			"type": "stdio",
 			"command": "bravais-cli",
 			"args": ["mcp"]
+		},
+		"github": {
+			"type": "stdio",
+			"command": "nix",
+			"args": ["run", "nixpkgs#github-mcp-server", "--", "stdio"],
+			"env": {
+				"GITHUB_PERSONAL_ACCESS_TOKEN": "${input:GITHUB_PERSONAL_ACCESS_TOKEN}",
+				"GITHUB_TOOLSETS": "context,repos,issues,pull_requests,actions",
+				"GITHUB_READ_ONLY": "1"
+			}
+		},
+		"obscura": {
+			"type": "stdio",
+			"command": "obscura",
+			"args": ["mcp"]
 		}
 	},
 	"inputs": [
@@ -94,6 +109,12 @@
 			"id": "PERPLEXITY_API_KEY",
 			"type": "promptString",
 			"description": "Perplexity API key",
+			"password": true
+		},
+		{
+			"id": "GITHUB_PERSONAL_ACCESS_TOKEN",
+			"type": "promptString",
+			"description": "GitHub personal access token",
 			"password": true
 		}
 	]

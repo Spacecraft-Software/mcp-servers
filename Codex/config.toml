@@ -5,7 +5,7 @@
 
 [mcp_servers.nixos]
 command = "nix"
-args = ["run", "github:utensils/mcp-nixos", "--"]
+args = ["run", "github:utensils/mcp-nixos/b94d837f37c43d2b9030c3af5140bcaa9700de31", "--"]
 
 [mcp_servers.context7]
 url = "https://mcp.context7.com/mcp"
@@ -65,5 +65,18 @@ TERM = "dumb"
 
 [mcp_servers.bravais-cli]
 command = "bravais-cli"
+args = ["mcp"]
+
+[mcp_servers.github]
+command = "nix"
+args = ["run", "nixpkgs#github-mcp-server", "--", "stdio"]
+
+[mcp_servers.github.env]
+GITHUB_PERSONAL_ACCESS_TOKEN = "YOUR_GITHUB_PERSONAL_ACCESS_TOKEN"
+GITHUB_TOOLSETS = "context,repos,issues,pull_requests,actions"
+GITHUB_READ_ONLY = "1"
+
+[mcp_servers.obscura]
+command = "obscura"
 args = ["mcp"]
 

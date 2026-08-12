@@ -3,7 +3,7 @@
   "mcpServers": {
     "nixos": {
       "command": "nix",
-      "args": ["run", "github:utensils/mcp-nixos", "--"]
+      "args": ["run", "github:utensils/mcp-nixos/b94d837f37c43d2b9030c3af5140bcaa9700de31", "--"]
     },
     "context7": {
       "type": "http",
@@ -65,6 +65,19 @@
     },
     "bravais-cli": {
       "command": "bravais-cli",
+      "args": ["mcp"]
+    },
+    "github": {
+      "command": "nix",
+      "args": ["run", "nixpkgs#github-mcp-server", "--", "stdio"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "YOUR_GITHUB_PERSONAL_ACCESS_TOKEN",
+        "GITHUB_TOOLSETS": "context,repos,issues,pull_requests,actions",
+        "GITHUB_READ_ONLY": "1"
+      }
+    },
+    "obscura": {
+      "command": "obscura",
       "args": ["mcp"]
     }
   }

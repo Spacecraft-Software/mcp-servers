@@ -39,6 +39,11 @@ env = "PERPLEXITY_API_KEY"
 placeholder = "YOUR_PERPLEXITY_API_KEY"
 description = "Perplexity API key"
 
+[[secrets]]
+env = "GITHUB_PERSONAL_ACCESS_TOKEN"
+placeholder = "YOUR_GITHUB_PERSONAL_ACCESS_TOKEN"
+description = "GitHub personal access token"
+
 # ---------------------------------------------------------------------------
 # Servers — declared in every host, in this order.
 # ---------------------------------------------------------------------------
@@ -47,12 +52,25 @@ description = "Perplexity API key"
 name = "nixos"
 transport = "stdio"
 command = "nix"
-args = ["run", "github:utensils/mcp-nixos", "--"]
+args = ["run", "github:utensils/mcp-nixos/b94d837f37c43d2b9030c3af5140bcaa9700de31", "--"]
 # There is no `mcp-nixos` binary on this machine — it is only ever reached through
 # `nix run`. An Antigravity override that called it directly shipped in the first
 # manifest and Antigravity answered with
 # `exec: "mcp-nixos": executable file not found in $PATH`. Do not reintroduce it
 # without first checking `command -v mcp-nixos`.
+#
+# The rev is load-bearing. This was `github:utensils/mcp-nixos`, a bare branch ref,
+# which nix re-resolves once its flake-tarball TTL expires. On 2026-08-09 that landed
+# on mcp-nixos 3.0.0, whose closure is not in the binary cache: every cold start then
+# tried to fetch 144.9 MiB and build two derivations, blowing the 30 s MCP init timeout
+# in both Codex and Claude Code. Worse, the build saturated the machine while the other
+# servers were starting, so `perplexity` and `sequential-thinking` timed out too —
+# servers that start in 14 s and 0.9 s on their own. An immutable rev is fetched once
+# and cached permanently, so a drifting upstream cannot repeat that.
+#
+# Bumping it is deliberate: pick the new rev, run
+# `nix build github:utensils/mcp-nixos/<rev>` to prove it substitutes rather than
+# builds, then render and deploy.
 
 [[servers]]
 name = "context7"
@@ -169,6 +187,52 @@ transport = "stdio"
 command = "bravais-cli"
 args = ["mcp"]
 
+[[servers]]
+name = "github"
+transport = "stdio"
+command = "nix"
+# Reached through `nix run`, like `nixos`, rather than as a bare binary: there is no
+# `github-mcp-server` on PATH on this machine. `nixpkgs#` resolves through the flake
+# registry, whose `nixpkgs` entry is pinned to a local store path here, so evaluation
+# needs no network — but the version therefore follows the system closure rather than
+# nixpkgs HEAD. Check `nix run nixpkgs#github-mcp-server -- --version` before assuming
+# a tool added upstream exists here.
+args = ["run", "nixpkgs#github-mcp-server", "--", "stdio"]
+# GITHUB_READ_ONLY is load-bearing, not a convenience. Standard §6.4 makes outbound
+# contribution default-deny and forbids automation from initiating one; this server's
+# write tools (create PR, open issue, comment, push) are exactly that act, on any repo
+# the token can reach. Dropping this line hands every host in this repository the
+# ability to perform it silently.
+#
+# GITHUB_TOOLSETS trims the tool surface to the five toolsets this workspace uses; the
+# default exposes every toolset to every host on every launch.
+env = { GITHUB_PERSONAL_ACCESS_TOKEN = "YOUR_GITHUB_PERSONAL_ACCESS_TOKEN", GITHUB_TOOLSETS = "context,repos,issues,pull_requests,actions", GITHUB_READ_ONLY = "1" }
+
+# VS Code resolves secrets through a prompted `input`, never a literal placeholder. The
+# other two variables are repeated because an override replaces `env` wholesale — it does
+# not merge — so omitting them would drop read-only mode on this host alone.
+[servers.overrides.VSCode]
+env = { GITHUB_PERSONAL_ACCESS_TOKEN = "${input:GITHUB_PERSONAL_ACCESS_TOKEN}", GITHUB_TOOLSETS = "context,repos,issues,pull_requests,actions", GITHUB_READ_ONLY = "1" }
+
+[[servers]]
+name = "obscura"
+transport = "stdio"
+# Bare name, like `engram`, `crates` and `bravais-cli`: Bravais installs Obscura into
+# the SYSTEM profile (modules/packages/ai.nix) rather than the user one precisely so
+# this resolves for a host launched from a desktop entry with a pruned environment.
+command = "obscura"
+args = ["mcp"]
+# Deliberately no RUST_LOG/NO_COLOR/TERM block, unlike `crates` and `terminal` — and
+# that is measured, not assumed. `obscura mcp` writes nothing to stdout but JSON-RPC
+# and nothing at all to stderr, even with RUST_LOG=debug set in the environment, so
+# there is no log output to silence. Re-probe before adding one.
+#
+# A headless browser with no Chromium and no Node: it drives navigation, clicks, forms,
+# tabs, cookies and extraction on a real V8 isolate. Two of its tools, browser_screenshot
+# and browser_pdf, exist only because Bravais builds Obscura with the `render` feature —
+# a default-feature build (which is all nixpkgs offers) drops them from tools/list
+# without erroring. If they go missing, suspect the build, not this entry.
+
 # ---------------------------------------------------------------------------
 # Hosts — where each host's template and live config files are.
 #
@@ -229,6 +293,15 @@ env vars under `[mcp_servers.<name>.env]`."""
 [[hosts]]
 name = "Kimi"
 live = ["~/.kimi-code/mcp.json"]
+# `~/.kimi-code/config.toml` is NOT a second live path, despite having carried a
+# `[mcp.client]` + `[mcp.client.servers.*]` block listing twelve servers until
+# 2026-08-09. The installed binary does not read it: `mcp.client.servers`,
+# `mcp.client`, and `tool_call_timeout_ms` all appear zero times in it, against 84
+# hits for `mcpServers` and 20 for `mcp.json`. The block was a leftover from an
+# older Kimi that has since moved MCP config to `mcp.json`, and it sat there
+# unmanaged, drifting, for long enough to look authoritative. It has been removed
+# from the live file. Do not add it to `live` and do not build a dialect for its
+# nested wrapper — measure the binary first, as above.
 
 [[hosts]]
 name = "Gemini"

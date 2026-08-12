@@ -61,6 +61,11 @@ const ACCEPTED: &[Variation] = &[
         server: "perplexity",
         reason: "resolves the key through a prompted `input`, not a literal placeholder",
     },
+    Variation {
+        host: "VSCode",
+        server: "github",
+        reason: "resolves the key through a prompted `input`, not a literal placeholder",
+    },
 ];
 
 /// Whether a host/server pair is a documented, accepted difference.
