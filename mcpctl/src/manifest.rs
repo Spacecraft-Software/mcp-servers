@@ -82,10 +82,32 @@ pub struct Server {
     /// Whether hosts should ship the server switched on.
     #[serde(default = "enabled_by_default")]
     pub enabled: bool,
+    /// Per-tool settings, keyed by tool name then setting.
+    ///
+    /// Only hosts whose dialect declares a tools field emit these; for the rest
+    /// they are silently absent, because the concept does not exist there. See
+    /// [`ToolSettings`].
+    #[serde(default)]
+    pub tools: ToolSettings,
     /// Differences that are correct for a specific host, keyed by host name.
     #[serde(default)]
     pub overrides: BTreeMap<String, Override>,
 }
+
+/// Per-tool settings: tool name -> setting -> value.
+///
+/// Deliberately untyped in the value position. The settings are host-specific
+/// vocabulary (Codex's `approval_mode`, say), and the manifest's job is to
+/// carry them, not to adjudicate them — enumerating them here would mean a
+/// schema change every time a host adds one.
+///
+/// This exists because a setting nested INSIDE a managed server is not covered
+/// by the unmanaged-entry rule, which operates one level up, on whole servers.
+/// A hand-added `[mcp_servers.engram.tools.save_chat] approval_mode` was
+/// therefore deleted on every deploy: the server was managed, so its table was
+/// rewritten wholesale, and the sub-table went with it. Declaring it here is
+/// what makes it survive.
+pub type ToolSettings = BTreeMap<String, OrderedMap>;
 
 /// Default for [`Server::enabled`].
 fn enabled_by_default() -> bool {
@@ -108,6 +130,9 @@ pub struct Override {
     pub headers: Option<OrderedMap>,
     /// Replacement enabled state.
     pub enabled: Option<bool>,
+    /// Replacement per-tool settings. Replaces the server's map wholesale
+    /// rather than merging into it, matching every other field here.
+    pub tools: Option<ToolSettings>,
     /// Whether this host does not carry the server at all.
     ///
     /// Distinct from `enabled = false`, which still emits the entry and only switches
@@ -178,6 +203,8 @@ pub struct Resolved {
     pub headers: OrderedMap,
     /// Whether the host should ship the server switched on.
     pub enabled: bool,
+    /// Per-tool settings, for hosts whose dialect carries them.
+    pub tools: ToolSettings,
 }
 
 impl Manifest {
@@ -284,6 +311,9 @@ impl Manifest {
                     enabled: overrides
                         .and_then(|entry| entry.enabled)
                         .unwrap_or(server.enabled),
+                    tools: overrides
+                        .and_then(|entry| entry.tools.clone())
+                        .unwrap_or_else(|| server.tools.clone()),
                 }
             })
             .collect()

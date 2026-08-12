@@ -141,29 +141,44 @@ pub fn toml(wrapper: &str, servers: &Map<String, Value>, header: Option<&str>) -
         let Some(fields) = entry.as_object() else {
             continue;
         };
-        let _ = writeln!(out, "[{wrapper}.{name}]");
-        for (key, value) in fields {
-            if value.is_object() {
-                continue;
-            }
+        toml_table(&mut out, &format!("{wrapper}.{name}"), fields);
+    }
+    out
+}
+
+/// Writes one TOML table at `path`, then each of its sub-tables, recursively.
+///
+/// Scalars first and sub-tables after is not a style choice: TOML binds every
+/// key following a table header to that header, so a sibling scalar written
+/// after a sub-table would be silently absorbed into it.
+///
+/// The recursion is what allows depth past `[wrapper.server.field]`. Codex's
+/// per-tool settings sit one level deeper (`[mcp_servers.x.tools.y]`), and the
+/// previous fixed-depth version rendered them as `y = ` with no value —
+/// invalid TOML the host rejects on load.
+fn toml_table(out: &mut String, path: &str, fields: &Map<String, Value>) {
+    // A header is written when the table holds scalars, and also when it is
+    // wholly empty — an empty table is meaningful to whoever wrote it, and
+    // these serializers rewrite host-owned entries as well as ours.
+    //
+    // It is skipped for a table that holds ONLY sub-tables, because TOML
+    // creates such a parent implicitly from `[a.b.c]`; writing `[a.b]` first
+    // would just be a stray line the host never had.
+    let scalars = fields.iter().filter(|(_, value)| !value.is_object());
+    if fields.is_empty() || scalars.clone().next().is_some() {
+        let _ = writeln!(out, "[{path}]");
+        for (key, value) in scalars {
             let _ = writeln!(out, "{key} = {}", toml_scalar(value));
         }
         out.push('\n');
-
-        for (key, value) in fields {
-            let Some(nested) = value.as_object() else {
-                continue;
-            };
-            // Emitted even when empty: an empty table is meaningful to whoever wrote it,
-            // and these serializers rewrite host-owned entries as well as ours.
-            let _ = writeln!(out, "[{wrapper}.{name}.{key}]");
-            for (inner_key, inner) in nested {
-                let _ = writeln!(out, "{inner_key} = {}", toml_scalar(inner));
-            }
-            out.push('\n');
-        }
     }
-    out
+
+    for (key, value) in fields {
+        let Some(nested) = value.as_object() else {
+            continue;
+        };
+        toml_table(out, &format!("{path}.{key}"), nested);
+    }
 }
 
 /// Renders one TOML scalar or array of scalars.

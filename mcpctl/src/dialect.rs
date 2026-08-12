@@ -116,6 +116,13 @@ pub struct Host {
     pub timeout: Option<Timeout>,
     /// Whether the host repeats the server's name inside its entry, as goose does.
     pub emit_name_field: bool,
+    /// Key holding per-tool settings, for hosts that have the concept.
+    ///
+    /// `None` means the host has no per-tool vocabulary, so a server's `tools`
+    /// map is simply not emitted there. That is silence, not an error: one
+    /// manifest serves every host, and a setting only some of them understand
+    /// is the normal case rather than a mistake.
+    pub tools_field: Option<&'static str>,
 }
 
 /// Every host this repository targets.
@@ -135,6 +142,8 @@ pub const HOSTS: &[Host] = &[
         enabled_style: EnabledStyle::Disabled("disabled"),
         timeout: None,
         emit_name_field: false,
+
+        tools_field: None,
     },
     Host {
         name: "VSCode",
@@ -151,6 +160,8 @@ pub const HOSTS: &[Host] = &[
         enabled_style: EnabledStyle::Absent,
         timeout: None,
         emit_name_field: false,
+
+        tools_field: None,
     },
     Host {
         name: "GitHubCopilotCLI",
@@ -167,6 +178,8 @@ pub const HOSTS: &[Host] = &[
         enabled_style: EnabledStyle::Absent,
         timeout: None,
         emit_name_field: false,
+
+        tools_field: None,
     },
     Host {
         name: "ClaudeCode",
@@ -183,6 +196,8 @@ pub const HOSTS: &[Host] = &[
         enabled_style: EnabledStyle::Absent,
         timeout: None,
         emit_name_field: false,
+
+        tools_field: None,
     },
     Host {
         name: "OpenClaude",
@@ -199,6 +214,8 @@ pub const HOSTS: &[Host] = &[
         enabled_style: EnabledStyle::Absent,
         timeout: None,
         emit_name_field: false,
+
+        tools_field: None,
     },
     Host {
         name: "Codex",
@@ -208,6 +225,8 @@ pub const HOSTS: &[Host] = &[
         url_field: "url",
         headers_field: "http_headers",
         env_field: "env",
+        // The only host in this table with per-tool settings today:
+        // `[mcp_servers.<server>.tools.<tool>] approval_mode = "approve"`.
         command_shape: CommandShape::Split,
         indent: Indent::Spaces(2),
         stdio_type: None,
@@ -215,6 +234,8 @@ pub const HOSTS: &[Host] = &[
         enabled_style: EnabledStyle::Absent,
         timeout: None,
         emit_name_field: false,
+
+        tools_field: Some("tools"),
     },
     Host {
         name: "Grok",
@@ -231,6 +252,8 @@ pub const HOSTS: &[Host] = &[
         enabled_style: EnabledStyle::Enabled("enabled"),
         timeout: None,
         emit_name_field: false,
+
+        tools_field: None,
     },
     Host {
         name: "Kimi",
@@ -247,6 +270,8 @@ pub const HOSTS: &[Host] = &[
         enabled_style: EnabledStyle::Absent,
         timeout: None,
         emit_name_field: false,
+
+        tools_field: None,
     },
     Host {
         name: "Gemini",
@@ -264,6 +289,8 @@ pub const HOSTS: &[Host] = &[
         enabled_style: EnabledStyle::Absent,
         timeout: None,
         emit_name_field: false,
+
+        tools_field: None,
     },
     Host {
         name: "Qwen",
@@ -280,6 +307,8 @@ pub const HOSTS: &[Host] = &[
         enabled_style: EnabledStyle::Absent,
         timeout: None,
         emit_name_field: false,
+
+        tools_field: None,
     },
     Host {
         name: "OpenCode",
@@ -301,6 +330,8 @@ pub const HOSTS: &[Host] = &[
             value: 60_000,
         }),
         emit_name_field: false,
+
+        tools_field: None,
     },
     Host {
         name: "Mimo",
@@ -320,6 +351,8 @@ pub const HOSTS: &[Host] = &[
             value: 60_000,
         }),
         emit_name_field: false,
+
+        tools_field: None,
     },
     Host {
         name: "Goose",
@@ -340,6 +373,8 @@ pub const HOSTS: &[Host] = &[
             value: 300,
         }),
         emit_name_field: true,
+
+        tools_field: None,
     },
 ];
 

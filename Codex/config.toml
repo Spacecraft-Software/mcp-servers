@@ -28,6 +28,9 @@ args = ["--with", "mcp<2", "mcp-server-fetch"]
 command = "engram"
 args = ["--db", "/home/mj/.local/share/engram/engram.db", "mcp"]
 
+[mcp_servers.engram.tools.save_chat]
+approval_mode = "approve"
+
 [mcp_servers.brave-search]
 command = "npx"
 args = ["-y", "@brave/brave-search-mcp-server"]

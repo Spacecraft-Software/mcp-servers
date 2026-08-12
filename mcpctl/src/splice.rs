@@ -206,6 +206,15 @@ fn toml_item(value: &Value) -> toml_edit::Item {
             for (key, item) in map.iter().filter(|(_, item)| item.is_object()) {
                 table.insert(key, toml_item(item));
             }
+            // A table holding only sub-tables is a namespace, not content, so
+            // mark it implicit and let `[a.b.c]` stand alone. Otherwise
+            // `toml_edit` writes a bare `[a.b]` header above it — a line the
+            // host never had, which then reads as drift on the next compare.
+            // The whole-file emitter applies the same rule; the two have to
+            // agree, or `render` and `deploy` disagree about one manifest.
+            if !map.is_empty() && map.values().all(Value::is_object) {
+                table.set_implicit(true);
+            }
             toml_edit::Item::Table(table)
         }
         other => toml_edit::Item::Value(toml_value(other)),
