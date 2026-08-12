@@ -145,6 +145,19 @@ command = "engram"
 # brand-new empty store in whatever directory its harness started in.
 args = ["--db", "/home/mj/.local/share/engram/engram.db", "mcp"]
 
+# `save_chat` writes a whole transcript into the memory store, so it is worth a
+# confirmation rather than running on the model's say-so. Codex is the only host
+# in the table with per-tool settings, hence an override rather than a
+# server-level `tools`.
+#
+# Declared here because a setting nested inside a MANAGED server is not covered
+# by the unmanaged-entry rule, which operates on whole servers: deploy rewrites
+# the server's table wholesale and carries any hand-added sub-table away with
+# it. This block lived in the live config and nowhere else, so every deploy
+# silently deleted it.
+[servers.overrides.Codex.tools.save_chat]
+approval_mode = "approve"
+
 [[servers]]
 name = "brave-search"
 transport = "stdio"

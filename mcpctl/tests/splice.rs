@@ -163,3 +163,53 @@ fn toml_rewrite_keeps_unrelated_sections_verbatim() {
     let parsed: toml::Value = toml::from_str(&result).expect("valid TOML");
     assert_eq!(parsed["mcp_servers"]["new"]["env"]["K"].as_str(), Some("v"));
 }
+
+#[test]
+fn nested_tool_tables_round_trip_through_both_toml_writers() {
+    // The two TOML writers have to agree byte-for-byte: `render` produces the
+    // tracked template, `deploy` splices the same servers into a live file, and
+    // a disagreement between them reads as permanent drift.
+    let servers = json!({
+        "engram": {
+            "command": "engram",
+            "tools": { "save_chat": { "approval_mode": "approve" } }
+        }
+    })
+    .as_object()
+    .expect("object")
+    .clone();
+
+    let whole_file = emit::toml("mcp_servers", &servers, None);
+    let spliced = splice::replace_toml_block("", "mcp_servers", &servers).expect("splices");
+
+    for (label, text) in [("emit", &whole_file), ("splice", &spliced)] {
+        let parsed: toml::Value = toml::from_str(text).unwrap_or_else(|e| panic!("{label}: {e}"));
+        assert_eq!(
+            parsed["mcp_servers"]["engram"]["tools"]["save_chat"]["approval_mode"].as_str(),
+            Some("approve"),
+            "{label} lost the per-tool setting"
+        );
+        // A bare `[mcp_servers.engram.tools]` is a namespace TOML creates
+        // implicitly; writing it is a stray line the host never had.
+        assert!(
+            !text.contains("[mcp_servers.engram.tools]\n"),
+            "{label} wrote a redundant namespace header:\n{text}"
+        );
+    }
+}
+
+#[test]
+fn a_genuinely_empty_table_keeps_its_header() {
+    // Distinct from the namespace case above: an empty table carries intent
+    // (goose's `available_tools = []` equivalents), so it must survive.
+    let servers = json!({ "goose": { "cmd": "x", "extra": {} } })
+        .as_object()
+        .expect("object")
+        .clone();
+
+    let text = emit::toml("mcp_servers", &servers, None);
+    assert!(
+        text.contains("[mcp_servers.goose.extra]"),
+        "empty table lost its header:\n{text}"
+    );
+}

@@ -283,6 +283,20 @@ pub fn server_entry(server: &Resolved, host: &Host) -> Result<Value> {
         entry.insert(timeout.key.to_owned(), json!(timeout.value));
     }
 
+    // Emitted last so it lands after the scalar keys. TOML requires it: a
+    // sub-table written before a sibling key would swallow that key into
+    // itself, so `[mcp_servers.x.tools.y]` must follow everything that belongs
+    // to `[mcp_servers.x]` directly.
+    if let Some(field) = host.tools_field {
+        if !server.tools.is_empty() {
+            let mut tools = Map::new();
+            for (tool, settings) in &server.tools {
+                tools.insert(tool.clone(), ordered(settings));
+            }
+            entry.insert(field.to_owned(), Value::Object(tools));
+        }
+    }
+
     Ok(Value::Object(entry))
 }
 
