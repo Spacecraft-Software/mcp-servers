@@ -31,6 +31,38 @@ use crate::manifest::{HostConfig, Manifest};
 use crate::runtime::{ExitCode, Failure, Profile};
 use crate::{dialect, emit, render, splice};
 
+/// Whether two renderings of a host config differ in CONTENT rather than
+/// merely in layout.
+///
+/// This replaces a byte comparison, which made any host that pretty-prints
+/// differently from `mcpctl` drift permanently. Claude Code rewrites
+/// `~/.claude.json` in its own formatting when it exits; the reserialization
+/// was reported as drift; a deploy reformatted the file; the host reformatted
+/// it back. No deploy could win that, and the probe cried wolf after every
+/// session.
+///
+/// The observed case: `dirty: true` with `added`, `updated` and `strays` all
+/// empty — 296 bytes and 37 lines of whitespace across a 244 KB file, with not
+/// one server, key, or value different. The per-server comparison in [`plan`]
+/// was already structural and correctly found nothing; only this file-level
+/// flag disagreed.
+///
+/// Key ORDER is deliberately not a difference either. [`plan`] preserves
+/// position so a human diff stays small, but a reordered map is the same
+/// configuration, and rewriting a file to sort it is the same wasted write.
+fn content_differs(before: &str, after: &str, format: Format) -> bool {
+    match (
+        dialect::parse(format, before, Strictness::Lenient),
+        dialect::parse(format, after, Strictness::Lenient),
+    ) {
+        (Ok(old), Ok(new)) => old != new,
+        // Unparseable on either side is not a licence to call it clean: fall
+        // back to the byte comparison, so a malformed file still reports drift
+        // rather than being silently skipped.
+        _ => before != after,
+    }
+}
+
 /// What deploying one file would do.
 #[derive(Debug)]
 struct Change {
@@ -315,11 +347,13 @@ fn plan_servers(
     let new_text = rewrite(&text, host, &merged)?;
     verify(&new_text, host, path, &managed)?;
 
+    let dirty = content_differs(&text, &new_text, host.format);
+
     Ok(Change {
         host: host.name,
         dialect: Some(host),
         path: path.to_path_buf(),
-        dirty: new_text != text,
+        dirty,
         original: text,
         merged,
         added,
@@ -370,20 +404,24 @@ fn plan_companion(
         }
     };
 
-    let updated = if new_text == text {
-        Vec::new()
-    } else {
+    // Companion files are always JSON, and get the same structural comparison
+    // as the server maps: reformatting one is not a change worth writing.
+    let dirty = content_differs(&text, &new_text, Format::Json);
+
+    let updated = if dirty {
         vec![path.file_name().map_or_else(
             || "companion".to_owned(),
             |name| name.to_string_lossy().into_owned(),
         )]
+    } else {
+        Vec::new()
     };
 
     Ok(Change {
         host: host.name,
         dialect: None,
         path: path.to_path_buf(),
-        dirty: new_text != text,
+        dirty,
         original: text,
         merged: Map::new(),
         added: Vec::new(),
@@ -753,4 +791,57 @@ pub fn placeholder_index(manifest: &Manifest) -> BTreeMap<String, String> {
         .iter()
         .map(|secret| (secret.placeholder.clone(), secret.env.clone()))
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Format, content_differs};
+
+    /// The case this function exists for: Claude Code rewrites `~/.claude.json`
+    /// in its own layout on exit, and the reserialization used to be reported
+    /// as drift forever, because no deploy can out-write the process that owns
+    /// the file.
+    #[test]
+    fn reformatting_alone_is_not_a_difference() {
+        let compact = r#"{"mcpServers":{"engram":{"command":"engram","args":["mcp"]}}}"#;
+        let pretty = "{\n  \"mcpServers\": {\n    \"engram\": {\n      \"command\": \"engram\",\n      \"args\": [\n        \"mcp\"\n      ]\n    }\n  }\n}\n";
+
+        assert_ne!(compact, pretty, "the fixtures must differ as bytes");
+        assert!(
+            !content_differs(compact, pretty, Format::Json),
+            "layout-only change reported as drift"
+        );
+    }
+
+    /// Position is preserved for readable diffs, but a reordered map is the
+    /// same configuration — rewriting a file to sort it is a wasted write.
+    #[test]
+    fn key_order_is_not_a_difference() {
+        let one = r#"{"a":{"command":"x"},"b":{"command":"y"}}"#;
+        let other = r#"{"b":{"command":"y"},"a":{"command":"x"}}"#;
+
+        assert!(!content_differs(one, other, Format::Json));
+    }
+
+    #[test]
+    fn a_real_value_change_is_still_a_difference() {
+        let before = r#"{"mcpServers":{"engram":{"command":"engram"}}}"#;
+        let after = r#"{"mcpServers":{"engram":{"command":"engram-next"}}}"#;
+
+        assert!(content_differs(before, after, Format::Json));
+    }
+
+    /// Unparseable input must not read as clean: a malformed file still
+    /// reports drift rather than being silently skipped.
+    #[test]
+    fn unparseable_input_falls_back_to_bytes() {
+        let broken = "{ this is not json";
+        let valid = r#"{"mcpServers":{}}"#;
+
+        assert!(content_differs(broken, valid, Format::Json));
+        assert!(
+            !content_differs(broken, broken, Format::Json),
+            "identical bytes are equal even when unparseable"
+        );
+    }
 }
