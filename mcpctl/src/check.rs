@@ -49,6 +49,14 @@ const ACCEPTED: &[Variation] = &[
         reason: "runs the mcp-nixos binary directly rather than through `nix run`",
     },
     Variation {
+        host: "Antigravity",
+        server: "crates",
+        reason: "wrapped through sh+grep to drop the spurious -32601 id:null error that \
+                 crates-mcp emits for notifications/initialized; without the filter that \
+                 line lands before tools/list and AGY reports `calling tools/list: \
+                 invalid request`",
+    },
+    Variation {
         host: "VSCode",
         server: "context7",
         reason: "resolves the key through a prompted `input`, not a literal placeholder",
