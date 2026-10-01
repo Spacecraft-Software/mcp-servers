@@ -272,6 +272,7 @@ dependencies = [
  "indexmap",
  "jiff",
  "jsonc-parser",
+ "libc",
  "rpassword",
  "serde",
  "serde_json",

@@ -16,6 +16,7 @@
 //! - [`emit`] — JSON, TOML, and YAML serializers tuned to look hand-written
 //! - [`render`] — manifest into host templates
 //! - [`check`] — parity across the generated templates
+//! - [`process`] — finding, and on request stopping, hosts that own their configs
 //! - [`runtime`] — execution profile, output envelope, structured errors
 //! - [`schema`] — the command surface as JSON Schema, for LLM function calling
 //!
@@ -44,6 +45,7 @@ pub mod dialect;
 pub mod emit;
 pub mod fill_keys;
 pub mod manifest;
+pub mod process;
 pub mod render;
 pub mod runtime;
 pub mod schema;

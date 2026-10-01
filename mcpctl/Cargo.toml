@@ -44,6 +44,11 @@ toml = { version = "0.9", features = ["preserve_order"] }
 # The YAML organization's maintained successor to the deprecated `serde_yaml`.
 yaml_serde = "0.10"
 
+[target.'cfg(unix)'.dependencies]
+# kill(2), for `deploy --kill-running`. Already in the tree through `rpassword`, so this
+# adds no new crate; a safe wrapper such as `rustix` or `nix` would.
+libc = "0.2"
+
 [profile.release]
 # Standard §3.2: record every applied and every disabled flag with its reason.
 #   APPLIED  lto / codegen-units=1 — whole-program optimization; build is small

@@ -33,7 +33,7 @@ differences are data in a table, not thirteen code paths.
 |---|---|
 | `mcpctl check` | Every template parses; every host declares the same servers with the same invocations |
 | `mcpctl render [--check]` | Manifest into templates; `--check` fails instead of writing |
-| `mcpctl deploy [--dry-run\|--yes] [--host N] [--force]` | Templates into the live configs |
+| `mcpctl deploy [--dry-run\|--yes] [--host N] [--force\|--kill-running]` | Templates into the live configs |
 | `mcpctl fill-keys [--yes]` | Real API keys into the live configs; also rotates |
 | `mcpctl schema [--format json\|anthropic\|openai\|gemini\|mcp]` | Command surface as JSON Schema |
 | `mcpctl describe` | How this invocation resolved: format, color, interactivity, caller |
