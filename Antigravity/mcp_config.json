@@ -52,18 +52,9 @@
       },
       "disabled": false
     },
-    "terminal": {
-      "command": "npx",
-      "args": ["-y", "mcp-server-terminal"],
-      "env": {
-        "RUST_LOG": "error",
-        "NO_COLOR": "1",
-        "TERM": "dumb"
-      },
-      "disabled": false
-    },
     "crates": {
-      "command": "crates-mcp",
+      "command": "sh",
+      "args": ["-c", "crates-mcp | grep --line-buffered -v '\"id\":null'"],
       "env": {
         "RUST_LOG": "error",
         "NO_COLOR": "1",

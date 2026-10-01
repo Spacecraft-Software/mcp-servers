@@ -197,6 +197,18 @@ args = ["-y", "mcp-server-terminal"]
 # Keeps TUI output plain so an agent reads it cleanly.
 env = { RUST_LOG = "error", NO_COLOR = "1", TERM = "dumb" }
 
+# The terminal-mcp Rust binary (the actual server the npm bootstrapper downloads)
+# starts in "visual mode" and expects a real pseudoterminal to allocate for the shell
+# sessions it manages. Over a plain pipe — which is how every MCP host launches stdio
+# servers — it closes the transport immediately after the initialize response and exits.
+# tools/list therefore never receives a reply and AGY reports
+# "connection closed: initialized request : … invalid trailing data at the end of stream".
+# TERM=dumb does not help; this is architectural, not a config knob.
+# The npm package at v1.0.5 ships the same binary as the cached v0.1.0; no newer build
+# changes this behaviour. Omit rather than ship a server that exits on every connect.
+[servers.overrides.Antigravity]
+omit = true
+
 [[servers]]
 name = "crates"
 transport = "stdio"
@@ -207,6 +219,26 @@ command = "crates-mcp"
 # skips lines it cannot parse and works anyway; Antigravity's Go client hard-fails with
 # `calling "initialize": invalid character '\x1b' looking for beginning of value`.
 # RUST_LOG=error silences the WARN/INFO pair, leaving the stream clean.
+env = { RUST_LOG = "error", NO_COLOR = "1", TERM = "dumb" }
+
+# crates-mcp does not implement the notifications/initialized handler. Its MCP SDK
+# treats that notification as an unknown method call and emits a -32601 error:
+#
+#   {"error":{"code":-32601,"message":"Method not found"},"id":null,"jsonrpc":"2.0"}
+#
+# This line arrives in the stream before the tools/list response. Antigravity reads
+# the -32601 as the tools/list reply and reports "calling \"tools/list\": invalid request".
+# The actual tools/list response (all five tools, correct) arrives too late.
+#
+# crates-mcp is at v0.1.0 — the only published version — so there is no upstream fix
+# to wait for. The workaround is a per-host grep filter that drops lines whose id is
+# null before AGY reads them. Every legitimate response from crates-mcp carries a
+# non-null id (it only replies to client requests; it never sends server-initiated
+# notifications), so the filter is safe to apply unconditionally on this host.
+# `--line-buffered` keeps the pipe from stalling between messages.
+[servers.overrides.Antigravity]
+command = "sh"
+args = ["-c", "crates-mcp | grep --line-buffered -v '\"id\":null'"]
 env = { RUST_LOG = "error", NO_COLOR = "1", TERM = "dumb" }
 
 [[servers]]

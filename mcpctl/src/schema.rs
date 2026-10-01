@@ -98,6 +98,10 @@ fn commands() -> Vec<Command> {
                     "type": "boolean",
                     "description": "Deploy to a host even while the process that owns its config is running. The write may be reverted by that process.",
                 },
+                "kill_running": {
+                    "type": "boolean",
+                    "description": "Offer to stop a running host process that owns its config before deploying. Always asks at a terminal, defaulting to no; --yes does not answer it, and without a terminal the run is refused with KILL_NEEDS_TERMINAL. Conflicts with force and dry_run.",
+                },
             }),
             required: &[],
             examples: &[

@@ -61,6 +61,12 @@ enum Command {
         /// Deploy to a host even while the process that owns its config is running.
         #[arg(long)]
         force: bool,
+
+        /// Offer to stop a running host that owns its config (Claude Code) before
+        /// deploying. Lists every matching process and asks; the answer defaults to no,
+        /// and `--yes` does not answer it.
+        #[arg(long, conflicts_with_all = ["force", "dry_run"])]
+        kill_running: bool,
     },
 
     /// Substitute API-key placeholders in the live configs.
@@ -148,6 +154,7 @@ fn run(cli: &Cli, profile: &Profile) -> Result<ExitCode, Failure> {
             yes,
             host,
             force,
+            kill_running,
         } => {
             if let Some(name) = host {
                 reject_control_chars("host", name)?;
@@ -157,7 +164,13 @@ fn run(cli: &Cli, profile: &Profile) -> Result<ExitCode, Failure> {
                 deploy::Options {
                     dry_run: *dry_run,
                     yes: *yes,
-                    force: *force,
+                    when_running: if *force {
+                        deploy::WhenRunning::Force
+                    } else if *kill_running {
+                        deploy::WhenRunning::OfferKill
+                    } else {
+                        deploy::WhenRunning::Skip
+                    },
                 },
                 host.as_deref(),
                 profile,

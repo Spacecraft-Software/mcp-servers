@@ -20,7 +20,7 @@
 //!    and the write itself is a rename over a fully written temporary.
 
 use std::collections::BTreeMap;
-use std::io::Write;
+use std::io::{IsTerminal, Write};
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
@@ -99,8 +99,24 @@ pub struct Options {
     pub dry_run: bool,
     /// Skip every confirmation prompt.
     pub yes: bool,
-    /// Deploy even while a host that owns its config is running.
-    pub force: bool,
+    /// What to do about a host whose process is running.
+    pub when_running: WhenRunning,
+}
+
+/// What `deploy` does about a host that owns its config and is running.
+///
+/// One enum rather than two flags because the choices exclude each other: forcing a
+/// write past a running host and stopping that host first are opposite answers to the
+/// same question.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum WhenRunning {
+    /// Hold the host back and report it. The default.
+    #[default]
+    Skip,
+    /// Write anyway (`--force`); the running host may revert the write.
+    Force,
+    /// Offer to stop the process first (`--kill-running`).
+    OfferKill,
 }
 
 /// Everything the planning pass discovered.
@@ -122,6 +138,11 @@ pub fn run(
     profile: &Profile,
 ) -> Result<ExitCode, Failure> {
     execute(repo, options, host_filter, profile).map_err(|error| {
+        // A refusal raised on purpose already carries its own code and hint.
+        let error = match error.downcast::<Failure>() {
+            Ok(failure) => return failure,
+            Err(error) => error,
+        };
         Failure::new(
             "DEPLOY_FAILED",
             ExitCode::Failed,
@@ -147,7 +168,12 @@ fn execute(
     let interactive = profile.interactive;
     let dry_run = options.dry_run || (!options.yes && !interactive);
 
-    let survey = survey(&manifest, &home, host_filter, options.force)?;
+    if options.when_running == WhenRunning::OfferKill && !dry_run {
+        stop_running_hosts(&manifest, host_filter, profile)?;
+    }
+
+    let force = options.when_running == WhenRunning::Force;
+    let survey = survey(&manifest, &home, host_filter, force)?;
     report(&survey, dry_run, profile);
 
     if dry_run {
@@ -185,13 +211,26 @@ fn survey(
 
         if let Some(process) = &config.guard_process
             && !force
-            && process_running(process)
         {
-            survey.blocked.push(format!(
-                "{} — `{process}` is running and rewrites its own config; exit it first",
-                host.name
-            ));
-            continue;
+            let running = crate::process::find(process);
+            if !running.is_empty() {
+                let pids = running
+                    .iter()
+                    .map(|found| found.pid.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                let way_out = if running.iter().any(|found| found.ancestor) {
+                    "mcpctl is running inside it; run mcpctl from a plain terminal"
+                } else {
+                    "exit it first, or re-run with --kill-running"
+                };
+                survey.blocked.push(format!(
+                    "{} — `{process}` is running (PID {pids}) and rewrites its own \
+                     config; {way_out}",
+                    host.name
+                ));
+                continue;
+            }
         }
 
         for path in config.live_paths(home) {
@@ -224,6 +263,94 @@ fn survey(
         }
     }
     Ok(survey)
+}
+
+/// Offers to stop every running process that owns a config about to be deployed to.
+///
+/// Killing a process loses whatever is unsaved in it, so this always asks, with the
+/// answer defaulting to no — and `--yes` does not answer it. `--yes` means "apply the
+/// manifest without asking", which is a statement about files; it is not consent to end
+/// a program the user may be working in. Without a person at a terminal to ask, the run
+/// is refused rather than guessed at.
+///
+/// A host whose process is still running afterwards is not an error here: the survey
+/// that follows sees it and holds that host back, exactly as without the flag.
+fn stop_running_hosts(
+    manifest: &Manifest,
+    host_filter: Option<&str>,
+    profile: &Profile,
+) -> Result<()> {
+    for host in HOSTS {
+        if host_filter.is_some_and(|wanted| wanted != host.name) {
+            continue;
+        }
+        let Some(name) = manifest
+            .host(host.name)
+            .and_then(|config| config.guard_process.as_deref())
+        else {
+            continue;
+        };
+        let (inside, targets): (Vec<_>, Vec<_>) = crate::process::find(name)
+            .into_iter()
+            .partition(|found| found.ancestor);
+
+        for found in inside.iter().filter(|_| !profile.json) {
+            println!(
+                "{} — mcpctl is running inside `{name}` (PID {}), which it cannot stop; \
+                 run mcpctl from a plain terminal",
+                host.name, found.pid
+            );
+        }
+        if targets.is_empty() {
+            continue;
+        }
+
+        let can_ask = !profile.agent && !profile.json && std::io::stdin().is_terminal();
+        if !can_ask {
+            return Err(Failure::new(
+                "KILL_NEEDS_TERMINAL",
+                ExitCode::Refused,
+                format!(
+                    "--kill-running asks before stopping {} `{name}` process(es), and \
+                     there is no terminal to ask at",
+                    targets.len()
+                ),
+                "mcpctl deploy --dry-run",
+            )
+            .into());
+        }
+
+        println!(
+            "\n{} — `{name}` is running and rewrites its config on exit:",
+            host.name
+        );
+        for found in &targets {
+            println!("  PID {:>7}  {}", found.pid, found.command);
+        }
+        if !confirm(
+            &format!(
+                "Stop {} `{name}` process(es)? Anything unsaved in them is lost. [y/N] ",
+                targets.len()
+            ),
+            false,
+        )? {
+            println!("  left running; {} will be skipped", host.name);
+            continue;
+        }
+
+        let survivors = crate::process::terminate(&targets);
+        let stopped = targets.len() - survivors.len();
+        println!("  stopped {stopped} `{name}` process(es)");
+        if !survivors.is_empty() {
+            let pids = survivors
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join(", ");
+            println!("  still running: PID {pids}; {} will be skipped", host.name);
+        }
+    }
+    Ok(())
 }
 
 /// Writes the planned changes, prompting when there is a terminal to prompt at.
@@ -638,29 +765,6 @@ pub fn backup(path: &Path, root: &Path) -> Result<()> {
         .with_context(|| format!("cannot back up `{}`", path.display()))?;
     restrict(&destination, OWNER_ONLY_FILE)?;
     Ok(())
-}
-
-/// Whether a process with this name is currently running.
-///
-/// Reads `/proc` directly rather than shelling out to `pgrep`, which is not present
-/// everywhere. Any other platform reports `false`, and the caller falls back to the
-/// confirmation prompt.
-fn process_running(name: &str) -> bool {
-    let Ok(entries) = std::fs::read_dir("/proc") else {
-        return false;
-    };
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if !path.join("comm").exists() {
-            continue;
-        }
-        if let Ok(comm) = std::fs::read_to_string(path.join("comm"))
-            && comm.trim() == name
-        {
-            return true;
-        }
-    }
-    false
 }
 
 /// Filesystem-safe UTC timestamp for the backup directory (Standard §14).

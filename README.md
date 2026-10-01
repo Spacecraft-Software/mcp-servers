@@ -115,7 +115,14 @@ that stops at `render` reaches no host while `git status` stays clean.
   temporary is narrowed before anything is written into it, and the replaced file's own
   mode is carried across — a config you have locked down to `0600` stays that way.
 - **It refuses to write to a config whose host is running** (Claude Code rewrites
-  `~/.claude.json` on exit, silently reverting a deploy). Exit the host, or pass `--force`.
+  `~/.claude.json` on exit, silently reverting a deploy), and names every matching
+  process by PID — a `claude --resume` left in a detached multiplexer pane counts. Exit
+  the host, pass `--kill-running` to be offered the stop, or pass `--force`.
+- **`--kill-running` always asks.** It lists each process with its full command line and
+  asks before stopping them, defaulting to no; `--yes` does not answer this question.
+  Stopping is `SIGTERM`, five seconds for the host to save and exit, then `SIGKILL`.
+  It never signals the session `mcpctl` itself runs inside, and without a terminal to
+  ask at it refuses (`KILL_NEEDS_TERMINAL`, exit 4) rather than guess.
 - **It defaults to `--dry-run`** whenever there is no terminal, or `CI` / `CLAUDECODE` is
   set, so an automated run reports rather than writes.
 
